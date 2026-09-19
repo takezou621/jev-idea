@@ -1,0 +1,32 @@
+packages/core/src/review.ts
+  s_cc263e7e5c2fe4::t_2f050ca388a98f 1-145
+packages/core/src/bin/jev-review.ts
+  s_cc263e7e5c2fe4::t_662e6ce17caded 1-134
+packages/core/test/review.test.ts
+  s_cc263e7e5c2fe4::t_6a6699b9961b24 1-36,51-56,58-72,74-87,89-95,97-116,122-124,126-168,171-206,209-210,212-217
+  s_cc263e7e5c2fe4::t_72c1165a36233f 119-120
+  s_cc263e7e5c2fe4::t_4453036d52c575 169-170
+  s_cc263e7e5c2fe4::t_232f986d45f482 57,73,88,96,117-118,121,125
+  s_cc263e7e5c2fe4::t_30800519355517 37-50
+  s_cc263e7e5c2fe4::t_2785c6acbbf560 207-208,211
+packages/core/package.json
+  s_cc263e7e5c2fe4::t_698c648aabc93c 10-11
+packages/core/src/log.ts
+  s_cc263e7e5c2fe4::t_dac4ed7683f242 86-90,101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5160a8f2606f95bc18db3f36c3124cfa80a77aaa",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
