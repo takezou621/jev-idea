@@ -36,8 +36,13 @@ export type LogEntry = {
   usage?: { input_tokens: number; output_tokens: number };
   model?: string;
   ms_total: number;
-  /** provider 1 試行の所要時間 */
-  ms_try?: number;
+  /** provider 試行ごとの所要時間（多数決 helper は複数試行 — docs/05「試行ごと」） */
+  ms_try?: number[];
+  /**
+   * observe 中の would-block（docs/05・#3）。block になったが pass を返した
+   * 記録。reason は本来の block の事実文。tp/fp 分類の対象（#4）
+   */
+  would_block?: { reason: string };
   evidence?: LogEvidenceSection[];
   fail_mode: FailMode;
   error?: string;

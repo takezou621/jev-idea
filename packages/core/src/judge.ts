@@ -12,6 +12,7 @@
 import { fileSink, toLogEvidence, toReasons, type LogEntry, type LogSink } from "./log.js";
 import { fromSdkAnswers } from "./sdk-answers.js";
 import { jevProvider } from "./jev-provider.js";
+import { majorityAnswers } from "./majority.js";
 import { resolveThresholds } from "./thresholds.js";
 import { evidenceToState } from "./state.js";
 import { toSdkQuestions } from "./sdk-questions.js";
@@ -21,11 +22,14 @@ import type {
   Judgment,
   JudgmentPoint,
   JudgeProvider,
+  RawSdkAnswer,
 } from "./types.js";
 
 export type JudgeOptions = {
   /** 総予算タイムアウト（ミリ秒）。超過で status: "failed" */
   budgetMs?: number;
+  /** 多数決 helper の試行回数（docs/05・#3。既定 1 = 多数決なし） */
+  repeats?: number;
   /** 判定の実行手段。省略時は Jev（@typesafe-ai/sdk）。テストは stub を注入 */
   provider?: JudgeProvider;
   /** ログシンク。false で無効。省略時は fileSink()（~/.jev/logs など） */
@@ -84,14 +88,53 @@ export async function judge(
     const state = evidenceToState(evidence);
     const questions = toSdkQuestions(point.criteria);
     const th = resolveThresholds(point.thresholds);
-    const tTry = Date.now();
+    // 多数決 helper（docs/05・#3）。同一 evidence を repeats 回判定し、
+    // criterion ごとに p の幅 ≥ 0.3 なら unknown に倒す（majorityAnswers）。
+    // 非有限数（NaN / Infinity / 0 / 負）の指定は設定ミスとして 1 に倒す
+    // （0 試行で answers 空の judged を返さない）
+    const repeats =
+      opts.repeats !== undefined && Number.isFinite(opts.repeats)
+        ? Math.max(1, opts.repeats)
+        : 1;
+    const raws: {
+      answers: Record<string, RawSdkAnswer>;
+      usage?: { input_tokens: number; output_tokens: number };
+      model?: string;
+    }[] = [];
+    const msTries: number[] = [];
     stage = "provider";
-    const result = await provider({ state, questions, signal: controller.signal });
-    const msTry = Date.now() - tTry;
+    for (let i = 0; i < repeats; i++) {
+      const tTry = Date.now();
+      const result = await provider({ state, questions, signal: controller.signal });
+      msTries.push(Date.now() - tTry);
+      raws.push(result);
+    }
     stage = "decision";
 
-    const answers = fromSdkAnswers(point.criteria, result.answers);
+    const answers = majorityAnswers(
+      point.criteria,
+      raws.map((r) => fromSdkAnswers(point.criteria, r.answers)),
+    );
     const action = point.decision(answers, th);
+    // observe（docs/05「フェイルオープンと observe」・#3）:
+    // gate: "reversible" の block 型に限定し、judged 成功時のみ適用する
+    // （判定失敗の failMode 経路は would-block ではない）。block を記録して
+    // pass を返す — 呼び出し側（フック・CI）の実挙動に影響させない
+    let reported = action;
+    let wouldBlock: { reason: string } | undefined;
+    if (point.observe && point.gate === "reversible" && action.kind === "block") {
+      wouldBlock = { reason: action.reason };
+      reported = { kind: "pass" };
+    }
+    // usage は複数試行の総和（あるものだけ加算。全試行に無ければ省略）
+    let usageSum: { input_tokens: number; output_tokens: number } | undefined;
+    for (const r of raws) {
+      if (r.usage === undefined) continue;
+      usageSum = {
+        input_tokens: (usageSum?.input_tokens ?? 0) + r.usage.input_tokens,
+        output_tokens: (usageSum?.output_tokens ?? 0) + r.usage.output_tokens,
+      };
+    }
     const msTotal = Date.now() - t0;
     writeLog(sink, {
       at: new Date().toISOString(),
@@ -100,17 +143,20 @@ export async function judge(
       ...(opts.project === undefined ? {} : { project: opts.project }),
       ...(opts.sessionId === undefined ? {} : { session_id: opts.sessionId }),
       status: "judged",
-      action: action.kind,
-      reasons: toReasons(action),
+      action: reported.kind,
+      reasons: toReasons(reported),
       answers,
-      ...(result.usage === undefined ? {} : { usage: result.usage }),
-      ...(result.model === undefined ? {} : { model: result.model }),
+      ...(usageSum === undefined ? {} : { usage: usageSum }),
+      ...(raws[raws.length - 1]?.model === undefined
+        ? {}
+        : { model: raws[raws.length - 1]!.model }),
       ms_total: msTotal,
-      ms_try: msTry,
+      ms_try: msTries,
       evidence: toLogEvidence(evidence),
       fail_mode: point.failMode,
+      ...(wouldBlock === undefined ? {} : { would_block: wouldBlock }),
     });
-    return { status: "judged", answers, action };
+    return { status: "judged", answers, action: reported };
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
     const action = failureAction(point, point.failMode);

@@ -32,6 +32,26 @@ jev-claude の実装（`isFalse(answer, 0.25)`、confidence 下限、正規化�
 | 多数決 helper | 同一 evidence で 3 回判定し多数決。3 回の p の幅が 0.3 以上なら「ばらつき大」として unknown にする（境界の不安定さの実測への対応） |
 | confidence ゲートの例外 | boolean 型（SDK noul）は confidence を持たないため、その型の判定ポイントは `thresholds.minConfidence: null` でゲートを無効にし p ベースの二値化にする（しきい値上書きの枠内。新規の規則ではない） |
 
+多数決 helper の criterion ごとの代表 Answer 構成（決定的に組立てる）:
+
+- 幅 ≥ 0.3 → confidence を欠落させた Answer を返す（confidence 欠落は常に
+  unknown — 原則 5）。分布も信頼できないので distribution も落とす
+- 幅 < 0.3 → p は下側中央値（実在する試行の値で決定的に選ぶ）。confidence は
+  **全試行に存在するときだけ**最小値を採用する（1 試行でも欠落すれば欠落 =
+  unknown に倒す）。distribution は中央値 p を持つ試行から採用する
+- 回答の欠落した試行が 1 つでもあれば、その criterion の回答は無し
+  （decision では verdict unknown になる）
+- 多数決の対象は Answer の合成のみ。二値化（true/false/unknown）は verdict の
+  1 か所で行う
+- 幅の比較は浮動小数点の丸め誤差の余裕（ε）をもって判定する
+  （0.7 - 0.4 = 0.29999999999999993 のような実数表現のズレで「ばらつき大」が
+  漏れないように。境界は unknown 側に寄せる）
+- **限界**: unknown の表現に confidence 欠落を使うため、`minConfidence: null`
+  （p ベース二値化。boolean 型の規定構成）の判定ポイントでは多数決の
+  unknown 化が効かない（verdict が p だけで決まり、振れた幅でも block/pass が
+  確定しうる）。p ベース二値化の判定ポイントでの振れ対策は未解決
+  （将来の設計課題。-answer 層に unknown を第一級で持つ等の選択肢あり）
+
 「unknown は false に潰さない」が鉄則。unknown の扱い（escalate / 安全側の
 アクション）は判定層で定義する。
 
@@ -116,7 +136,7 @@ type Judgment =
 
 declare function judge(point: JudgmentPoint, opts?: {
   budgetMs?: number;      // 総予算タイムアウト。AbortSignal で自前管理
-  repeats?: number;       // 多数決 helper（既定 1）。#3 で導入（本 PR では未実装）
+  repeats?: number;       // 多数決 helper（既定 1 = 多数決なし）。試行回数
 }): Promise<Judgment>;
 ```
 
@@ -171,6 +191,11 @@ decision: (a) => {
   不可逆操作の前で走らせることは「ゲートを外した本番運用」そのものだから。
   closed ポイントの導入検証は合成ゴールデン + ステージング環境で行う
   （overview 原則 7 の例外）
+- observe が適用される判定（judged 成功時のみ。判定失敗の failMode 経路は
+  would-block ではない）で decision が block を返した場合、judge はログに
+  `would_block`（本来の block reason）を記録し、呼び出し側には pass を返す
+  （フック・CI の実挙動に影響させない）。gate が "reversible" 以外・
+  block 以外の action では observe は適用されない
 
 ## ログ・ゴールデン・tp/fp 分類
 
@@ -181,7 +206,7 @@ jev-claude の実装をそのまま一般化する:
 | 判定ログ | `answers` / `reasons` / トークン数 / 所要時間（試行ごとと judge 全体）/ evidence の由来ファイルと時刻と **meta / data の種別**。コマンド文字列は先頭 200 文字。**evidence の生テキストは載せない**（スナップショット #4 に譲る。ログ肥大と機密散在の防止）。ディレクトリ 0700 / ファイル 0600（新規作成時のみ chmod。既存ディレクトリの権限は変えない）。ログ失敗は判定に影響させない |
 | スナップショット | block（と closed ゲートの作動）時のみ状態テキスト全文を 64KB 上限で保存。report から `--show N` で参照 |
 | ゴールデン | 判定ポイントごとに `golden/<point-id>/*.jsonl`。expected は**人手で確定**。境界で block/pass が揺れる同一入力は `FLAKY` リストに入れ分母から外す |
-| observe / would-block | block 型が observe のとき記録する。tp/fp 分類の対象 |
+| observe / would-block | observe が適用された block は `would_block`（本来の block reason）として記録する。ログの action は実際に返した action。tp/fp 分類の対象 |
 | tp/fp 分類 | review コマンドで未分類の block / would-block を一覧し、`<番号> tp\|fp\|unclear [メモ]` で記録。**追記・後勝ち**（覆した経過も残る）。tp はゴールデン化の材料 |
 | 実運用とテストの分離 | テスト由来のログに `golden-` / `mj-` 等の接頭辞を持たせ、レポートが分けて数える |
 
