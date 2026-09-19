@@ -11,6 +11,8 @@ import type { Action, Answer, Evidence, FailMode } from "./types.js";
 export type LogEvidenceSection = {
   /** meta + data を通したセクション番号 */
   index: number;
+  /** meta / data の種別（docs/05 メタ分離。判定ログに分離を記録する — #2 DoD 2） */
+  section: "meta" | "data";
   title?: string;
   /** evidence の由来（ファイルパスなど） */
   source?: string;
@@ -47,15 +49,18 @@ export type LogSink = (entry: LogEntry) => void;
 export function toLogEvidence(evidence: Evidence): LogEvidenceSection[] {
   const out: LogEvidenceSection[] = [];
   let i = 0;
-  for (const s of [...evidence.meta, ...evidence.data]) {
+  const push = (section: "meta" | "data", s: (typeof evidence)["meta"][number]) => {
     out.push({
       index: i++,
+      section,
       ...(s.title === undefined ? {} : { title: s.title }),
       ...(s.source === undefined ? {} : { source: s.source }),
       ...(s.sourceTime === undefined ? {} : { sourceTime: s.sourceTime }),
       ...(s.command === undefined ? {} : { command: s.command.slice(0, 200) }),
     });
-  }
+  };
+  for (const s of evidence.meta) push("meta", s);
+  for (const s of evidence.data) push("data", s);
   return out;
 }
 

@@ -67,14 +67,37 @@ describe("judge のログ（docs/05 判定ログ仕様）", () => {
     // evidence の由来（docs/05「evidence の由来ファイルと時刻」）。
     // 生テキストはスナップショット（#4）に譲り、ログには由来のみを残す
     expect(e.evidence).toEqual([
-      { index: 0, title: "前提" },
+      { index: 0, section: "meta", title: "前提" },
       {
         index: 1,
+        section: "data",
         source: "/tmp/state.txt",
         sourceTime: "2026-09-19T00:00:00Z",
         command: "node -e 'console.log(1)'",
       },
     ]);
+  });
+
+  it("meta と data の分離が section 種別としてログに記録される（#2 DoD 2）", async () => {
+    const r = await judge(
+      {
+        id: "log-meta-data",
+        criteria: [BOOLEAN],
+        evidence: () => ({
+          meta: [
+            { title: "検出 1", text: "事実 1" },
+            { title: "検出 2", text: "事実 2" },
+          ],
+          data: [{ text: "生データ" }],
+        }),
+        decision: () => ({ kind: "pass" }),
+        failMode: "open",
+      },
+      { provider, log: sink },
+    );
+    expect(r.status).toBe("judged");
+    const e = entries[entries.length - 1]!;
+    expect(e.evidence?.map((s) => s.section)).toEqual(["meta", "meta", "data"]);
   });
 
   it("コマンド文字列は先頭 200 文字に切る", async () => {
