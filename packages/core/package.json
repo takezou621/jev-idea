@@ -6,6 +6,9 @@
   "description": "jev-core — 共通判定レイヤー（回答層・判定層・ログ）",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "jev-golden": "./dist/bin/jev-golden.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
