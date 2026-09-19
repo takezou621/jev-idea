@@ -20,9 +20,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.test.json",
-    "test": "vitest run"
+    "test": "npm run typecheck && vitest run"
   },
   "dependencies": {
-    "@typesafe-ai/sdk": "^0.6.0"
+    "@typesafe-ai/sdk": "^0.6.0",
+    "ts-morph": "^28.0.0"
   }
 }

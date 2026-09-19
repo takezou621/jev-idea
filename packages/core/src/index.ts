@@ -32,3 +32,6 @@ export {
   type WithinRangeDef,
 } from "./assertions/validate.js";
 export { require as requireAssertion } from "./assertions/dsl.js";
+export { compileAssertion } from "./assertions/compile.js";
+export type { AssertionViolation, CheckedBy, CompiledAssertion, TypeOf } from "./assertions/compile.js";
+export { findAssertionUsages, type AssertionUsage } from "./assertions/references.js";
