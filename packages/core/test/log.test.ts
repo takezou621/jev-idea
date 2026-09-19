@@ -62,7 +62,8 @@ describe("judge のログ（docs/05 判定ログ仕様）", () => {
     expect(e.answers).toEqual({ bypass: { criterion: "bypass", p: 0.9 } });
     expect(e.usage).toEqual({ input_tokens: 42, output_tokens: 3 });
     expect(typeof e.ms_total).toBe("number");
-    expect(typeof e.ms_try).toBe("number");
+    // 試行ごとの所要時間（多数決 helper は複数試行になるため配列）
+    expect(Array.isArray(e.ms_try)).toBe(true);
     expect(typeof e.at).toBe("string");
     // evidence の由来（docs/05「evidence の由来ファイルと時刻」）。
     // 生テキストはスナップショット（#4）に譲り、ログには由来のみを残す
