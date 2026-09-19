@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "jev-judge": {
+      "command": "node",
+      "args": ["packages/core/dist/bin/jev-judge.js"]
+    }
+  }
+}
