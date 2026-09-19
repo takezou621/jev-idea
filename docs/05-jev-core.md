@@ -30,19 +30,52 @@ jev-claude の実装（`isFalse(answer, 0.25)`、confidence 下限、正規化�
 | `false` と判定 | `p ≤ 0.25` かつ `confidence ≥ 0.5` |
 | `unknown` | 上記以外（0.25〜0.75 の中間帯、confidence < 0.5、**confidence 欠落は常に unknown**） |
 | 多数決 helper | 同一 evidence で 3 回判定し多数決。3 回の p の幅が 0.3 以上なら「ばらつき大」として unknown にする（境界の不安定さの実測への対応） |
+| confidence ゲートの例外 | boolean 型（SDK noul）は confidence を持たないため、その型の判定ポイントは `thresholds.minConfidence: null` でゲートを無効にし p ベースの二値化にする（しきい値上書きの枠内。新規の規則ではない） |
 
 「unknown は false に潰さない」が鉄則。unknown の扱い（escalate / 安全側の
 アクション）は判定層で定義する。
 
+### 分布集計（score 型の二次的な二値化の材料）
+
+SDK は score 回答に段別確率分布 `probabilities` を返す。jev-core はこれを
+norm キー（段 / (length - 1)）に変換して `Answer.distribution` に保持し、
+決定的な集計 helper `massBelow(answer, normThreshold, exclude?)` を提供する
+（normThreshold 未満の段の確率質量合計。1 で頭打ち。分布なしは undefined）。
+分布の集中を使った確信ゲート（例: jev-claude 完了判定の「未完了側の質量 ≥ 0.6
+かつ confidence ≥ 0.3」）は、判定層の `decision` 内で massBelow の結果と
+confidence 比較を組合わせて決定的に書く（二値化はここでも 1 か所）。
+
+- 合計が 1 + 1e-6 を超える分布は**回答ごと捨てる**（jev-claude の罠: 確信ある
+  未完了の偽造。信頼できない分布を massBelow に流さない）
+- 分布内の非数値・範囲外の段は除去して受け、回答は捨てない
+- `exclude` は特定段を集計から外す（継承した学習の表現口。例: 完了判定の
+  段 2「実装は済んでいるが、必要な検証が行われていない」は検証が「必要だった」
+  ときだけ未完了側に数える）
+
 ## インターフェース
 
 ```ts
-type Criterion = { id: string; question: string };
+// 1 criterion = 1 質問。質問型（score / boolean）を Criterion に持つ。
+// choice 型は docs/05 では未規定（将来の PR で規定する）。
+type Criterion =
+  | { type: "score"; id: string; question: string;
+      rubric: readonly [string, string, ...string[]] }   // 最低 2 段（SDK 制約）
+  | { type: "boolean"; id: string; question: string;
+      meanings?: { true?: string; false?: string } };
+
+type Section = {
+  title?: string;
+  text: string;          // data は生のまま。加工・要約・評価語を付けない
+  source?: string;       // evidence の由来（ファイルパスなど。判定ログに記録）
+  sourceTime?: string;   // 由来の時刻（ファイル mtime など）
+  command?: string;      // 由来コマンド。判定ログには先頭 200 文字のみ記録
+};
 
 type Answer = {
   criterion: string;
-  p: number;            // 回答層の確率
-  confidence?: number;  // 欠落は unknown に倒す
+  p: number;             // 回答層の確率（score 型は 0..1 に正規化）
+  confidence?: number;   // 欠落は unknown に倒す
+  distribution?: Record<string, number>;  // score 型のみ。キーは段の norm 値
 };
 
 type Action =
@@ -56,11 +89,20 @@ type Evidence = {
   data: Section[];   // 対象データそのもの（diff、コード、イベント列など生のまま）
 };
 
+// しきい値の上書き。未指定フィールドは既定値。
+// minConfidence: null は confidence ゲート無効（boolean 型用。上記の表を参照）。
+// falseMax ≥ trueMin の逆転設定は解決時に falseMax = trueMin - 0.05 に強制される
+// （jev-claude の学習継承。自壊する設定を静かに通さない。throw にはしない）
+type Thresholds = { trueMin?: number; falseMax?: number; minConfidence?: number | null };
+
 type JudgmentPoint = {
   id: string;                                    // ログとゴールデンの鍵
   criteria: Criterion[];
+  thresholds?: Thresholds;                       // 回答層しきい値の上書き口
   evidence: () => Evidence;                      // 状態テキストの組立て
-  decision: (answers: Record<string, Answer>) => Action;  // 決定的に書く
+  // 第 2 引数に judge が解決したしきい値が渡る。verdict 等はこの th を使い、
+  // 宣言と使用のズレを型で防ぐ（しきい値の定義は 1 か所）
+  decision: (answers: Record<string, Answer>, th: ResolvedThresholds) => Action;
   failMode: "open" | "closed" | "escalate";      // Jev 不通時の挙動
   gate?: "reversible" | "irreversible";          // observe 適用可否の判定に使う（下記）
   observe?: boolean;                             // block 型のみ有効
@@ -68,11 +110,13 @@ type JudgmentPoint = {
 
 type Judgment =
   | { status: "judged"; answers: Record<string, Answer>; action: Action }
-  | { status: "failed"; error: Error };  // 呼び出し側は failMode に従う
+  // failed でも failMode に従う action を返す（呼び出し側に failMode の
+  // 解釈をさせない。docs/06 契約）
+  | { status: "failed"; error: Error; action: Action };
 
 declare function judge(point: JudgmentPoint, opts?: {
   budgetMs?: number;      // 総予算タイムアウト。AbortSignal で自前管理
-  repeats?: number;       // 多数決 helper（既定 1）
+  repeats?: number;       // 多数決 helper（既定 1）。#3 で導入（本 PR では未実装）
 }): Promise<Judgment>;
 ```
 
@@ -129,7 +173,7 @@ jev-claude の実装をそのまま一般化する:
 
 | 機能 | 仕様 |
 |---|---|
-| 判定ログ | `answers` / `reasons` / トークン数 / 所要時間（試行ごとと judge 全体）/ evidence の由来ファイルと時刻。コマンド文字列は先頭 200 文字。ディレクトリ 0700 / ファイル 0600 |
+| 判定ログ | `answers` / `reasons` / トークン数 / 所要時間（試行ごとと judge 全体）/ evidence の由来ファイルと時刻。コマンド文字列は先頭 200 文字。**evidence の生テキストは載せない**（スナップショット #4 に譲る。ログ肥大と機密散在の防止）。ディレクトリ 0700 / ファイル 0600（新規作成時のみ chmod。既存ディレクトリの権限は変えない）。ログ失敗は判定に影響させない |
 | スナップショット | block（と closed ゲートの作動）時のみ状態テキスト全文を 64KB 上限で保存。report から `--show N` で参照 |
 | ゴールデン | 判定ポイントごとに `golden/<point-id>/*.jsonl`。expected は**人手で確定**。境界で block/pass が揺れる同一入力は `FLAKY` リストに入れ分母から外す |
 | observe / would-block | block 型が observe のとき記録する。tp/fp 分類の対象 |
