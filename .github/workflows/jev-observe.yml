@@ -1,0 +1,52 @@
+# jev-observe — PR 判定 (a) の observe 配線（docs/01 3-2・#18）。
+#
+# - observe 中: 判定結果は実挙動に影響しない（would_block は jev-judge の
+#   判定ログのみ。docs/05「フェイルオープンと observe」）。block 有効化は #19
+# - summary（markdown）には p が現れない（jev-judge 出力契約。docs/06）。
+# - 判定は jev-judge MCP サーバー経由（jev-observe CLI が bin を spawn）。
+#   判定の実行と決定は core 側で完結する
+# - プロバイダは TYPESAFE_API_KEY（secret）。未設定（fork PR 等）でも例外には
+#   ならず status: "failed" + fail-open で緑になる（docs/06 契約）。その場合は
+#   summary に「判定に失敗」が載り、observe 判定は積めない
+# - 判定ログ（would_block の本来 reason。tp/fp 分類の素材）は 0700/0600 で
+#   --log-dir に書き、リポジトリアクセス権限者のみ見える artifact として
+#   保存する（docs/07「リポジトリに入れない」は git リポジトリへの混入禁止。
+#   判定ログは PR の diff 以上の機密を含まない）
+name: jev-observe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "**.ts"
+      - "packages/core/**"
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # <base>...HEAD の merge-base diff に履歴が必要
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build --workspace=@jev/core
+      - name: jev-observe (PR 判定 (a)・observe)
+        # pipefail: CLI の配線エラー（exit 1）を tee で飲ませない
+        run: |
+          set -o pipefail
+          node packages/core/dist/bin/jev-observe.js --base "origin/${{ github.base_ref }}" --log-dir "$PWD/.jev-observe-logs" | tee "$GITHUB_STEP_SUMMARY"
+      - name: Upload judgment logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jev-observe-logs
+          path: .jev-observe-logs
+          retention-days: 30

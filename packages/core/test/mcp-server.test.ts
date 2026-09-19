@@ -207,10 +207,22 @@ describe("judge ツール — evidence の扱い（docs/06 原則 3）", () => {
     const state = serverWith(stubProvider(PASS_ANSWERS));
     const unknown = await state.call("judge", { point: "no-such-point" });
     expect(unknown.isError).toBe(true);
-    expect(unknown.content[0]!.text).toContain("synth-boolean, synth-closed, synth-observe, synth-open");
+    // 既定 points は SYNTH_POINTS + 実ポイント（docs/06「実ポイントはここに登録する」）
+    expect(unknown.content[0]!.text).toContain("req-assertion-a1, req-assertion-a23, synth-boolean, synth-closed, synth-observe, synth-open");
     expect((await state.call("judge", { point: "synth-open", opts: { budgetMs: -1 } })).isError).toBe(true);
     expect((await state.call("judge", { point: "synth-open", opts: { repeats: 0 } })).isError).toBe(true);
     expect((await state.call("judge", { point: "synth-open", opts: { repeats: 6 } })).content[0]!.text).toContain("<= 5");
+  });
+
+  it("既定 points に実ポイント（req-assertion-a1 / a23）が登録され、tools/list の説明に載る（#18 配線）", async () => {
+    const state = createJevJudgeServer({ provider: stubProvider(PASS_ANSWERS), log: false });
+    const r = await handleMessage(state, JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }));
+    const description = (r?.result as { tools: { description: string }[] }).tools[0]!.description;
+    expect(description).toContain("req-assertion-a1");
+    expect(description).toContain("req-assertion-a23");
+    const called = await state.call("judge", { point: "req-assertion-a1", evidence: { kind: "inline", inline: [{ text: "合成対象データ" }] } });
+    expect(called.isError).toBeUndefined();
+    expect((called.structuredContent as { status: string }).status).toBe("judged");
   });
 });
 

@@ -37,3 +37,12 @@ export type { AssertionViolation, CheckedBy, CompiledAssertion, TypeOf } from ".
 export { findAssertionUsages, type AssertionUsage } from "./assertions/references.js";
 export { extractAssertionDefs, findTouchedAssertions, type AssertionDefSymbol, type TouchedAssertion } from "./assertions/touched.js";
 export { REQ_ASSERTION_A1, REQ_ASSERTION_A23 } from "./points/req-assertion-a.js";
+export {
+  CLIENT_BUDGET_MS,
+  JEV_JUDGE_BIN,
+  McpClientError,
+  startJevJudgeClient,
+  type JudgeToolOutput,
+  type JevJudgeClient,
+  type JevJudgeClientOptions,
+} from "./mcp/client.js";
