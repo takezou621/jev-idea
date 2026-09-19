@@ -1,0 +1,23 @@
+docs/05-jev-core.md
+  s_cc263e7e5c2fe4::t_b6917dd2f81564 149-151
+README.md
+  s_cc263e7e5c2fe4::t_82b51808f5de9c 56-57
+AGENTS.md
+  s_cc263e7e5c2fe4::t_575e99a64a8903 66-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ace7cbad891f76c1263bf7bc024c2c2f02f542f0",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "unknown"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
