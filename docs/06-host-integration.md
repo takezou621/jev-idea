@@ -55,6 +55,51 @@
 - `reason` は事実のみ（docs/05 の契約どおり）。判定語をホストの LLM に撒かない
 - `summary` に p を含めない。p は判定ログ（0700/0600）で人間のみが見る
 
+実装上の確定事項（#5）:
+
+- 出力は `{status, action, summary}` の 3 キーのみ（structuredContent と
+  content[0].text に同一内容）。p・confidence・answers は出力のどこにも現れない。
+  Issue #5 の DoD 記載の `status: "error"` は docs/05・06 の `status: "failed"`
+  を正とする（docs/05 の型に合わせる）
+- `summary` は宣言済み criterion の verdict（true/false/unknown）と action のみ。
+  例: `synth-open: completion=false → block`。failed 時は
+  `判定点id: 判定に失敗 (理由)。failMode <mode> に従い <action> を返す`
+- **evidence のマージ規則**: サーバーは point.evidence() を 1 回呼んで base を
+  取り、呼び出し evidence を **data に追記**する（`meta: base.meta,
+  data: [...base.data, ...呼び出し分]`）。meta の組立ては point 定義のみが行い、
+  呼び出し側からは meta を受け取らない。生テキストはそのまま（加工・要約なし）で
+  state に入る
+- paths: サーバーが readFileSync で読む。section の `source` にパス、
+  `sourceTime` に mtime（ISO 8601）を残す。存在しないパス・非ファイルは入力エラー
+- **evidence root（paths の読み取り範囲）**: realpath 解決（symlink 実体）のうえ、
+  evidence root 配下のパスのみ読める（docs/06 原則 3 の「リポジトリ内のパス」の
+  実装。ホスト LLM 指定の任意パス — .env・~/.ssh 等 — から機密を読み外部 API に
+  送出する経路を閉じる）。root は `JEV_EVIDENCE_ROOT` 環境変数で変更可、
+  既定はサーバーの cwd。1 ファイル 1,048,576 バイト（1 MiB）超も入力エラー
+- inline: 1 セクション 4096 文字上限。超過は入力エラー
+- **既定予算・repeats 上限**: `opts.budgetMs` 未指定時の総予算は 120000 ms
+  （1 件の遅い判定が stdio ループ全体を専有しないため）。`opts.repeats` は
+  1〜5 の整数
+- **isError のセマンティクス**: 入力不正（未知 point・evidence root 外のパス・
+  上限超過・不正 opts）は `isError: true` のツール結果。judge の失敗
+  （`status: "failed"` + failMode に従う action）は契約どおりの正常な結果なので
+  isError を立てない
+- failed 時 `summary` のエラー部分は空白正規化 + 200 文字丸め（生応答本文に p が
+  混入しうる出水口を狭くする）。エラー全文は判定ログ（0700/0600）で人間のみが見る
+- 判定ログは `label: "mcp"` で記録される（`jev-review` のレポートで mcp グループに
+  分離される）
+
+### 登録手順（配線）
+
+- **Claude Code**: リポジトリルートの `.mcp.json`（本リポジトリに同梱）:
+  `{"mcpServers": {"jev-judge": {"command": "node", "args": ["packages/core/dist/bin/jev-judge.js"]}}}`。
+  事前に `packages/core` で `npm run build` が必要
+- **goose**: `goose configure` の extensions で stdio MCP サーバーとして同じ
+  コマンドを登録する。recipe 経由で使う場合は recipe の `extensions` に書く
+- プロバイダは `TYPESAFE_API_KEY`（未設定なら `TYPESAFE_BASE_URL` をスタブに向けて
+  検証する。両方未設定でもサーバーは起動し、判定は `status: "failed"` +
+  failMode に従う action になる）
+
 ### 定義は 1 か所、ホスト差分は配線だけ
 
 判定ポイント定義（質問・しきい値・decision）をホストごとに変えない。変えると
@@ -139,7 +184,13 @@ Phase 2（docs/02）の完了条件に「goose から thought-graph を登録し
 ## 検証方法
 
 - **両ホスト同一判定**: jev-judge を Claude Code / goose の両方から同一呼び出しし、
-  docs/05 のゴールデンと同一の action が返ること
+  docs/05 のゴールデンと同一の action が返ること。実 API を叩かない検証では
+  `TYPESAFE_BASE_URL` を開発用スタブ（`packages/core/scripts/dev-stub-api.mjs`、
+  `POST /v1/systemone` に固定 answers を返す）に向ける:
+  1. `node packages/core/scripts/dev-stub-api.mjs 8787`（既定 answers は block 側）
+  2. `TYPESAFE_BASE_URL=http://127.0.0.1:8787` を付けて jev-judge を両ホストに登録
+  3. 同一 point（例: `synth-open`）・同一 evidence で両ホストから judge を呼び、
+     返ってきた action が一致することを確認する（0-5 の完了条件）
 - **recipe 完走**: goose の recipe で docs/04 のループが収束まで完走すること
 - **closed ゲート**: PreToolUse deny で機密ゲートが goose でも作動すること
 - **正直な限界**: goose の recipe / hooks の正確な文法・種別は本設計時点で一部
