@@ -18,3 +18,17 @@ export { jevProvider } from "./jev-provider.js";
 export { majorityAnswers, MAJORITY_SPREAD_MAX } from "./majority.js";
 export { fileSink, toLogEvidence, toReasons, type LogEntry, type LogEvidenceSection, type LogSink } from "./log.js";
 export { judge, type JudgeOptions } from "./judge.js";
+export {
+  ALLOWED_PATTERN_FLAGS,
+  hasNestedQuantifier,
+  MAX_DEF_JSON_BYTES,
+  MAX_PATTERN_LENGTH,
+  validateAssertionDef,
+  type AssertionDef,
+  type BasisRef,
+  type DefValidationError,
+  type PatternDef,
+  type Severity,
+  type WithinRangeDef,
+} from "./assertions/validate.js";
+export { require as requireAssertion } from "./assertions/dsl.js";
