@@ -1,0 +1,44 @@
+packages/core/test/observe.test.ts
+  s_cc263e7e5c2fe4::t_3fe1cdf199caa3 1-117
+packages/core/src/log.ts
+  s_cc263e7e5c2fe4::t_e2d1ebfb09024b 39-45
+packages/core/test/log.test.ts
+  s_cc263e7e5c2fe4::t_986c58c70e8e40 65-66
+packages/core/test/majority.test.ts
+  s_cc263e7e5c2fe4::t_c8ad26f38b59a8 28-30,44,62,73,79-135,157-170,174
+  s_cc263e7e5c2fe4::t_21217e39f8dae3 1-8,10,19,32-33,41-43,45,58-59,230-231
+  s_cc263e7e5c2fe4::t_9e90f42eb86ed6 9,11-18,20-27,31,34-40,46-57,60-61,63-72,74-78,136-156,171-173,175-229
+packages/core/src/majority.ts
+  s_cc263e7e5c2fe4::t_6cff4d621b922c 39,42-43
+  s_cc263e7e5c2fe4::t_d38d2b5f06099b 25-29
+  s_cc263e7e5c2fe4::t_29371e091c61de 44
+  s_cc263e7e5c2fe4::t_7bce50680067f4 1-24,30-38,40-41,45-64
+packages/core/src/judge.ts
+  s_cc263e7e5c2fe4::t_0300f20d9002d2 91,99-104,106-111,114-117,119-137,146-147,149-152,154,157,159
+  s_cc263e7e5c2fe4::t_4b27498e02c514 92-98
+  s_cc263e7e5c2fe4::t_681e0e7869ee90 15,25,31-32
+packages/core/src/index.ts
+  s_cc263e7e5c2fe4::t_b76d57c5bc574a 18
+docs/05-jev-core.md
+  s_cc263e7e5c2fe4::t_1c8049a1cd9f79 35-45,54
+  s_cc263e7e5c2fe4::t_3ffa7550e98f59 46-53
+  s_cc263e7e5c2fe4::t_085c08f088f4ed 194-198
+  s_cc263e7e5c2fe4::t_b83518829a271a 139
+  s_cc263e7e5c2fe4::t_124f04282ef397 209
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9594618d1a108ac3276f4a6603edc9f420ab3585",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
