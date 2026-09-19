@@ -1,0 +1,54 @@
+docs/06-host-integration.md
+  s_cc263e7e5c2fe4::t_be00aeed04069e 74-78,80-88
+  s_cc263e7e5c2fe4::t_df2613fa3ffef6 58-73,79,89-102
+  s_cc263e7e5c2fe4::t_84f06f506726fe 187-193
+packages/core/src/mcp/jev-judge.ts
+  s_cc263e7e5c2fe4::t_a92dc37d1053f3 14-15
+  s_cc263e7e5c2fe4::t_69fcdb7d4194d9 196-197
+  s_cc263e7e5c2fe4::t_dcd2e9cf65f152 145,154-157
+  s_cc263e7e5c2fe4::t_e9a772b9388586 179
+  s_cc263e7e5c2fe4::t_e49f5656b5a62e 63-67,69-80,87,90,93-94,99-106
+  s_cc263e7e5c2fe4::t_bfa5329451edc5 26-34,42-43
+  s_cc263e7e5c2fe4::t_9b7b4c0893308b 214,216,218-221
+  s_cc263e7e5c2fe4::t_eb4008c407182f 223-225
+  s_cc263e7e5c2fe4::t_3f2f64fb12ee9b 1-13,16-25,35-41,44-62,68,81-86,88-89,91-92,95-98,107-144,146-153,158-178,180-195,198-213,215,217,222,226-236
+.mcp.json
+  s_cc263e7e5c2fe4::t_579f3d9f085189 1-8
+packages/core/package.json
+  s_cc263e7e5c2fe4::t_fd35aead9002de 11
+packages/core/test/mcp-server.test.ts
+  s_cc263e7e5c2fe4::t_641b30de8803cc 166,175-190
+  s_cc263e7e5c2fe4::t_dea409e0866b64 210
+  s_cc263e7e5c2fe4::t_3a7093cc13a0f2 325-326
+  s_cc263e7e5c2fe4::t_18a8eed8e97097 163
+  s_cc263e7e5c2fe4::t_70b80c2f8a1623 37,46,48-56
+  s_cc263e7e5c2fe4::t_9cd91b52fc612e 213
+  s_cc263e7e5c2fe4::t_2aa0fc047dd613 12-13
+  s_cc263e7e5c2fe4::t_37890cb09d77ee 1-11,14-36,38-45,47,57-162,164-165,167-174,191-209,211-212,214-324,327-346
+packages/core/scripts/dev-stub-api.mjs
+  s_cc263e7e5c2fe4::t_e9ec0f8035eda9 1-38
+packages/core/src/mcp/protocol.ts
+  s_cc263e7e5c2fe4::t_b23243feef36c5 1-121
+packages/core/src/bin/jev-judge.ts
+  s_cc263e7e5c2fe4::t_c22b9056f97073 1-23
+packages/core/src/mcp/server.ts
+  s_cc263e7e5c2fe4::t_6b68023066be74 1-30,32-36,38-39
+  s_cc263e7e5c2fe4::t_d6b4f30c5f611d 31
+  s_cc263e7e5c2fe4::t_bbf08db89a8b1b 37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "82396662a554a224a565f48296b4f0f07f9e6225",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
