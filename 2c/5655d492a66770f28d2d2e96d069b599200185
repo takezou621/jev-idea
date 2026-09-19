@@ -1,0 +1,45 @@
+packages/core/src/assertions/compile.ts
+  s_cc263e7e5c2fe4::t_08f32e1725dcf0 1-20,26-83,93-102
+  s_cc263e7e5c2fe4::t_5e09348d548e3a 21-25
+  s_cc263e7e5c2fe4::t_012881ea85c7b4 84-92
+packages/core/test/fixtures/requirements/sample.req.ts
+  s_cc263e7e5c2fe4::t_9f5c7564bb63ca 1-6,8-28
+  s_cc263e7e5c2fe4::t_c9e40bdd50d8f5 7
+packages/core/src/assertions/references.ts
+  s_cc263e7e5c2fe4::t_136e92d6089078 28-36
+  s_cc263e7e5c2fe4::t_b2840bc590f17b 1-27,37-79
+packages/core/test/assertions-references.test.ts
+  s_cc263e7e5c2fe4::t_b472ed912299f8 1-61,63,65-72,95
+  s_cc263e7e5c2fe4::t_bf62f1f3137821 62,64
+  s_cc263e7e5c2fe4::t_0d9be3f5554e70 73-82,87-88,90-92,94
+  s_cc263e7e5c2fe4::t_d170c1d82bb3bf 83-86,89,93
+packages/core/src/index.ts
+  s_cc263e7e5c2fe4::t_e5ae302ed1c3e4 35-36
+  s_cc263e7e5c2fe4::t_21021048e57a67 37
+packages/core/test/assertions-compile.test.ts
+  s_cc263e7e5c2fe4::t_c1c11b8888a00b 10-11
+  s_cc263e7e5c2fe4::t_73c4f530fed0f9 77-90
+  s_cc263e7e5c2fe4::t_6554a90d355a3f 44-46
+  s_cc263e7e5c2fe4::t_7250fd480e2af9 1-9,12-43,47-76,91-108
+packages/core/package.json
+  s_cc263e7e5c2fe4::t_7bf3b1fb63e027 23
+  s_cc263e7e5c2fe4::t_cb1babda5495e4 26-27
+package-lock.json
+  s_cc263e7e5c2fe4::t_160e5326a10e33 831-841,991-1011,1049-1054,1149-1165,1198-1212,1239-1244,1269-1280,1401-1416,1447-1456,1648-1654
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2c5655d492a66770f28d2d2e96d069b599200185",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
