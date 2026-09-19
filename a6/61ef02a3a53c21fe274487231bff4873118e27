@@ -1,0 +1,57 @@
+packages/core/test/points-req-assertion-a.test.ts
+  s_cc263e7e5c2fe4::t_7542c34ba732e3 20,25-31,56-60
+  s_cc263e7e5c2fe4::t_139d9ce5b4c9d8 71,74
+  s_cc263e7e5c2fe4::t_5ccede60c5b6c4 125-126
+  s_cc263e7e5c2fe4::t_6dd0c28776a50a 109,111
+  s_cc263e7e5c2fe4::t_7c66aecdac5da3 1-19,21-24,32,34-55,61-70,72-73,75-77,79-108,110,112-124,127-130
+  s_cc263e7e5c2fe4::t_20b6bc781709be 33
+  s_cc263e7e5c2fe4::t_308fddbb0aa2e1 78
+packages/core/src/index.ts
+  s_cc263e7e5c2fe4::t_c1d0348b4b6063 38-39
+packages/core/src/points/req-assertion-a.ts
+  s_cc263e7e5c2fe4::t_59e0ea8a6e4295 55-57,67
+  s_cc263e7e5c2fe4::t_966b44bae209f4 1-48,50-54,61-66,68-79,81-91,95-100,102-104,106-108,110,114,117-118,120,123-128
+  s_cc263e7e5c2fe4::t_5d415f8063cbc0 49
+  s_cc263e7e5c2fe4::t_e45842f86d4e26 58-60
+  s_cc263e7e5c2fe4::t_6045f0e4ea1103 80
+  s_cc263e7e5c2fe4::t_28a3d1e0f12000 92-94,101
+  s_cc263e7e5c2fe4::t_44012c8eba620f 105,109,111-113,115-116,119,121-122
+packages/core/test/fixtures/golden/req-assertion-a1/cases.jsonl
+  s_cc263e7e5c2fe4::t_93bda40165d52a 5,7-8
+  s_cc263e7e5c2fe4::t_cfee19f27d98f4 1-4,6,9
+  s_cc263e7e5c2fe4::t_d2ff387a8ffdaa 10
+packages/core/src/assertions/touched.ts
+  s_cc263e7e5c2fe4::t_26cb2459ec235d 63-70,74
+  s_cc263e7e5c2fe4::t_8bd3f06a28c7c0 33-34,37-38,40-41
+  s_cc263e7e5c2fe4::t_afdb2a8c7ad5f6 1-32,35-36,39,42-62,71-73,75-96
+packages/core/test/fixtures/golden/req-assertion-a23/cases.jsonl
+  s_cc263e7e5c2fe4::t_12cb1fb31e3e7a 1-11
+packages/core/test/golden.test.ts
+  s_cc263e7e5c2fe4::t_d2ff387a8ffdaa 3
+  s_cc263e7e5c2fe4::t_b350fe114549d4 37,55,78
+  s_cc263e7e5c2fe4::t_9caf566404209d 21,25-33
+  s_cc263e7e5c2fe4::t_da5a39bb063dad 48-49,51
+  s_cc263e7e5c2fe4::t_0d983eeee05a05 64-76
+  s_cc263e7e5c2fe4::t_7417221cafe7c6 79
+  s_cc263e7e5c2fe4::t_7a92d5ffccfb27 34
+packages/core/test/assertions-touched.test.ts
+  s_cc263e7e5c2fe4::t_ab4f334afa3e8a 31,33,35-44,46-55
+  s_cc263e7e5c2fe4::t_95056c24569d42 25,45
+  s_cc263e7e5c2fe4::t_417cbf832ef005 1-24,26-30,32,34,56-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a661ef02a3a53c21fe274487231bff4873118e27",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "unknown"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
