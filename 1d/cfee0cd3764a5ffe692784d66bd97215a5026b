@@ -1,0 +1,33 @@
+packages/core/src/golden.ts
+  s_cc263e7e5c2fe4::t_aba0e84cd80323 80-122
+packages/core/test/fixtures/golden/synth-open/cases.jsonl
+  s_cc263e7e5c2fe4::t_89f2ec16379e18 8
+packages/core/src/bin/jev-golden.ts
+  s_cc263e7e5c2fe4::t_d989318da58645 128-139
+  s_cc263e7e5c2fe4::t_038b433a8aa3b4 87-92
+  s_cc263e7e5c2fe4::t_84fff25593af9c 27-28,31-36
+  s_cc263e7e5c2fe4::t_d72b3c9e97fbc0 22
+packages/core/test/golden.test.ts
+  s_cc263e7e5c2fe4::t_996e991328f3be 123-154
+  s_cc263e7e5c2fe4::t_d2fffa4253c943 3
+packages/core/src/synth-points.ts
+  s_cc263e7e5c2fe4::t_3bafaeea70c464 55,63,72
+  s_cc263e7e5c2fe4::t_6b523929db0c20 25-47
+  s_cc263e7e5c2fe4::t_d6dcf90a1c2339 80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1dcfee0cd3764a5ffe692784d66bd97215a5026b",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
