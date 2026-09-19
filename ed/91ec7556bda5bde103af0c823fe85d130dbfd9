@@ -1,0 +1,63 @@
+docs/05-jev-core.md
+  s_cc263e7e5c2fe4::t_9e8eeee2103bf5 79-81
+  s_cc263e7e5c2fe4::t_d6d47faa91bc6a 1-78,82-149
+docs/02-thought-graph.md
+  s_cc263e7e5c2fe4::t_755cb985b22edc 78-80
+  s_cc263e7e5c2fe4::t_fe06d04256b361 104-106,112-118
+  s_cc263e7e5c2fe4::t_fa9783a5f268be 141,144-145,150-164
+  s_cc263e7e5c2fe4::t_0509dbca87a5e8 1-77,81-103,107-111,119-140,142-143,146-149,165-174,176-190,192-241
+  s_cc263e7e5c2fe4::t_7abcf8840941c4 175
+  s_cc263e7e5c2fe4::t_3aca9e182186db 191
+docs/03-instant-fork.md
+  s_cc263e7e5c2fe4::t_22b384ca4883ff 81
+  s_cc263e7e5c2fe4::t_b6eafec5ac259b 97
+  s_cc263e7e5c2fe4::t_0b500e6aa58011 1-80,82-96,98-103,114-145,147,150,152-181
+  s_cc263e7e5c2fe4::t_0b59f6139bdd8d 146,148-149,151
+  s_cc263e7e5c2fe4::t_bf3d5b41c2af24 104-113
+docs/00-overview.md
+  s_cc263e7e5c2fe4::t_b32f42a0c1100c 1-10,12-78,80,85-150,160-211
+  s_cc263e7e5c2fe4::t_a328174a60349c 79,81-84
+  s_cc263e7e5c2fe4::t_f163ba4e5b66c2 151-159
+  s_cc263e7e5c2fe4::t_65f544e3c48e88 212-213
+  s_cc263e7e5c2fe4::t_52115b01309393 11
+README.md
+  s_cc263e7e5c2fe4::t_1e83051da4fb79 2-16,20-44
+  s_cc263e7e5c2fe4::t_9e60e368d221ff 17-19
+docs/01-requirement-assertions.md
+  s_cc263e7e5c2fe4::t_716a2378bea859 1-52,54,56-120,122-126,130-147,149-151,157-184,192-224
+  s_cc263e7e5c2fe4::t_70273f943b68bc 121
+  s_cc263e7e5c2fe4::t_24ad4454d73534 127-129
+  s_cc263e7e5c2fe4::t_fa69dad3705c40 148,152-156
+  s_cc263e7e5c2fe4::t_87b51bae78e934 185-191
+  s_cc263e7e5c2fe4::t_3b6fc28ac9917a 53,55
+docs/04-dual-generation.md
+  s_cc263e7e5c2fe4::t_15d1a2b9acca45 162
+  s_cc263e7e5c2fe4::t_b42784a01a2d70 1-59,62-63,73,85-86,97-102,125,130-132,142-148,152-160,163-173,175-205,225-229,231-242,244-245,247-263,265-266,269-274
+  s_cc263e7e5c2fe4::t_4ae712179dd46c 230
+  s_cc263e7e5c2fe4::t_b025205c154786 133-141
+  s_cc263e7e5c2fe4::t_0d72d289103bf5 60-61,64-72,74-84,87-96,103-124,126-129
+  s_cc263e7e5c2fe4::t_23b361f570dfa7 174
+  s_cc263e7e5c2fe4::t_02a0f940449391 149-151
+  s_cc263e7e5c2fe4::t_83f2dc81bef227 243
+  s_cc263e7e5c2fe4::t_2a0bfad519b048 264,267-268
+  s_cc263e7e5c2fe4::t_846fb0d31baf57 246
+  s_cc263e7e5c2fe4::t_b2bf280e790603 206-223
+  s_cc263e7e5c2fe4::t_ae457986ac7c3f 224
+  s_cc263e7e5c2fe4::t_58742f3b6e8d5e 161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ed91ec7556bda5bde103af0c823fe85d130dbfd9",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
