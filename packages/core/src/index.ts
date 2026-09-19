@@ -35,3 +35,5 @@ export { require as requireAssertion } from "./assertions/dsl.js";
 export { compileAssertion } from "./assertions/compile.js";
 export type { AssertionViolation, CheckedBy, CompiledAssertion, TypeOf } from "./assertions/compile.js";
 export { findAssertionUsages, type AssertionUsage } from "./assertions/references.js";
+export { extractAssertionDefs, findTouchedAssertions, type AssertionDefSymbol, type TouchedAssertion } from "./assertions/touched.js";
+export { REQ_ASSERTION_A1, REQ_ASSERTION_A23 } from "./points/req-assertion-a.js";
