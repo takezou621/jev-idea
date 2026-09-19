@@ -1,0 +1,21 @@
+README.md
+  s_cc263e7e5c2fe4::t_305847f46caa43 57-59
+AGENTS.md
+  s_cc263e7e5c2fe4::t_6b226eac98dc1f 64-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aa57def98898dadefe76ff630c0c63bf070a706d",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
