@@ -83,6 +83,11 @@ export function toReasons(action: Action): string[] {
   }
 }
 
+/** ログディレクトリの解決（fileSink と review（#4）で共有。docs/05 配置） */
+export function resolveLogDir(logDir?: string): string {
+  return logDir ?? process.env.JEV_LOG_DIR ?? join(homedir(), ".jev", "logs");
+}
+
 /**
  * jsonl への追記シンク。ディレクトリ 0700 / ファイル 0600（docs/05）。
  * 既存ディレクトリ・ファイルの権限は変えない（利用者が持つ権限を勝手に締めない）。
@@ -93,8 +98,7 @@ export function toReasons(action: Action): string[] {
 export function fileSink(logDir?: string): LogSink {
   return (entry: LogEntry) => {
     try {
-      const dir =
-        logDir ?? process.env.JEV_LOG_DIR ?? join(homedir(), ".jev", "logs");
+      const dir = resolveLogDir(logDir);
       if (!existsSync(dir)) {
         mkdirSync(dir, { recursive: true });
         chmodSync(dir, 0o700); // umask で緩まないように

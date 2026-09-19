@@ -207,7 +207,7 @@ jev-claude の実装をそのまま一般化する:
 | スナップショット | block（と closed ゲートの作動）時のみ状態テキスト全文を 64KB 上限で保存。report から `--show N` で参照 |
 | ゴールデン | 判定ポイントごとに `golden/<point-id>/cases.jsonl`（1 行 1 ケースの jsonl）。expected は**人手で確定**。境界で block/pass が揺れる同一入力は `FLAKY` リスト（`golden/flaky.jsonl`）に入れ分母から外す |
 | observe / would-block | observe が適用された block は `would_block`（本来の block reason）として記録する。ログの action は実際に返した action。tp/fp 分類の対象 |
-| tp/fp 分類 | review コマンドで未分類の block / would-block を一覧し、`<番号> tp\|fp\|unclear [メモ]` で記録。**追記・後勝ち**（覆した経過も残る）。tp はゴールデン化の材料 |
+| tp/fp 分類 | review コマンドで未分類の block / would-block を一覧し、`<番号> tp\|fp\|unclear [メモ]` で記録。**追記・後勝ち**（覆した経過も残る）。tp はゴールデン化の材料。分類対象は status: judged の行に限る（status: failed の failMode 経路 — 判定器の故障 — は判定の正誤ではないため対象外） |
 | 実運用とテストの分離 | テスト由来のログに `golden-` / `mj-` 等の接頭辞を持たせ、レポートが分けて数える |
 
 ## Phase 0 の実装計画
