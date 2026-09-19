@@ -62,7 +62,8 @@
 
 - **1 Issue = 1 PR**。依存 Issue が open のままなら着手しない
 - 着手順: Phase 0（#1〜#6）→ Phase 1（#7〜#11）→ Phase 2（#12〜#16）→ Phase 3（#17〜#21）→
-  Phase 4（#22〜#25）。**Phase 0 が完了するまで Phase 1〜4 に着手しない**（docs/05）
+  Phase 4（#22〜#25）。**判定を使うステップは Phase 0 完了まで着手しない**。判定を使わない
+  決定的部分（#7 の DSL・#22 の L0・収集/正規化など）は Phase 0 と並行で着手してよい（docs/05）
 - ブランチ: `issue/<番号>-<slug>`（例: `issue/1-jev-core-judge`）
 - 着手時の手順:
   1. Issue 本文と参照節（docs）を読む

@@ -145,5 +145,7 @@ jev-claude の実装をそのまま一般化する:
 | 0-3 | 多数決 helper + observe + would-block 記録 | 同一 evidence 3 回のばらつき検出が動く |
 | 0-4 | ゴールデン・tp/fp 分類・レポート | 合成ゴールデン 20 件以上、review → golden 化の流れが一巡する |
 
-Phase 0 が完了するまで、Phase 1〜4 は着手しない。各設計書の判定ポイントは
-この `JudgmentPoint` 型で記述される。
+Phase 0 が完了するまで、Phase 1〜4 のうち**判定を使うステップは着手しない**。判定を
+使わない決定的部分（docs/04 の仕様 DSL・コンパイラ、docs/03 の L0 記録・リプレイ、
+docs/02 のイベント収集と正規化）は Phase 0 と並行で着手してよい。各設計書の判定
+ポイントはこの `JudgmentPoint` 型で記述される。
