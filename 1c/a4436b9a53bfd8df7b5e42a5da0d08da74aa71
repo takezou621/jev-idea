@@ -1,0 +1,33 @@
+docs/00-overview.md
+  s_cc263e7e5c2fe4::t_bbb0a9d507ab87 88-93
+  s_cc263e7e5c2fe4::t_26e67c48c7fccc 4-6
+  s_cc263e7e5c2fe4::t_c8b4043437f281 13
+  s_cc263e7e5c2fe4::t_a8d169878257a3 205-207
+docs/06-host-integration.md
+  s_cc263e7e5c2fe4::t_85acc99bab6ac1 1-147
+README.md
+  s_cc263e7e5c2fe4::t_1b3b02d2d92b9f 4-6,10-21,37-40,43-45
+  s_cc263e7e5c2fe4::t_fd0c8bb0e91083 33
+  s_cc263e7e5c2fe4::t_95fe08ea488c11 1
+docs/04-dual-generation.md
+  s_cc263e7e5c2fe4::t_ba17e427b3efdb 144-146
+docs/02-thought-graph.md
+  s_cc263e7e5c2fe4::t_c9bf0ebde99504 80-81
+  s_cc263e7e5c2fe4::t_2478e9982bd2e0 206-207
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1ca4436b9a53bfd8df7b5e42a5da0d08da74aa71",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
