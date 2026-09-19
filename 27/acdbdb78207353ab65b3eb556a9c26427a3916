@@ -1,0 +1,21 @@
+docs/07-mvp-validation.md
+  s_cc263e7e5c2fe4::t_0cd5a9a09f7b5c 43,47-48,50-52
+  s_cc263e7e5c2fe4::t_e8a6b2ac45c1eb 72,75-78
+  s_cc263e7e5c2fe4::t_231c647c1339f3 79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "27acdbdb78207353ab65b3eb556a9c26427a3916",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "unknown"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
