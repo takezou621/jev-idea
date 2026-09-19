@@ -129,7 +129,7 @@ jev-claude の実装をそのまま一般化する:
 
 | 機能 | 仕様 |
 |---|---|
-| 判定ログ | `answers` / `reasons` / トークン数 / evidence の由来ファイルと時刻。コマンド文字列は先頭 200 文字。ディレクトリ 0700 / ファイル 0600 |
+| 判定ログ | `answers` / `reasons` / トークン数 / 所要時間（試行ごとと judge 全体）/ evidence の由来ファイルと時刻。コマンド文字列は先頭 200 文字。ディレクトリ 0700 / ファイル 0600 |
 | スナップショット | block（と closed ゲートの作動）時のみ状態テキスト全文を 64KB 上限で保存。report から `--show N` で参照 |
 | ゴールデン | 判定ポイントごとに `golden/<point-id>/*.jsonl`。expected は**人手で確定**。境界で block/pass が揺れる同一入力は `FLAKY` リストに入れ分母から外す |
 | observe / would-block | block 型が observe のとき記録する。tp/fp 分類の対象 |
