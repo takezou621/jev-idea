@@ -1,0 +1,52 @@
+packages/core/src/synth-points.ts
+  s_cc263e7e5c2fe4::t_fe186a12c6d742 1-76
+packages/core/test/golden.test.ts
+  s_cc263e7e5c2fe4::t_475d1efc110eb5 8
+  s_cc263e7e5c2fe4::t_c1de7832e63da8 1-2,4,7,9-50,61-111,113-122
+  s_cc263e7e5c2fe4::t_09ac49998be64a 3,5-6
+  s_cc263e7e5c2fe4::t_15a8f2cf667724 51-60
+  s_cc263e7e5c2fe4::t_14c0cde113259a 112
+packages/core/test/fixtures/golden/synth-observe/cases.jsonl
+  s_cc263e7e5c2fe4::t_bdf94f26a309fb 8
+  s_cc263e7e5c2fe4::t_2b1fc5ae853cb8 1-7
+packages/core/package.json
+  s_cc263e7e5c2fe4::t_7d14f99ef3f1dd 9-11
+packages/core/test/fixtures/golden/synth-boolean/cases.jsonl
+  s_cc263e7e5c2fe4::t_13d5badc83be22 9
+  s_cc263e7e5c2fe4::t_677ebf63b06ab1 1-8
+packages/core/src/golden.ts
+  s_cc263e7e5c2fe4::t_b7d9245dd918c2 141
+  s_cc263e7e5c2fe4::t_2c8ea8289a1851 142-143,150-153
+  s_cc263e7e5c2fe4::t_ae57dbe6c580ab 57-58,61-63,67-80,86
+  s_cc263e7e5c2fe4::t_03866d1da4678f 1-56,59-60,64-66,81-85,87-140,144-149,154-189
+packages/core/src/bin/jev-golden.ts
+  s_cc263e7e5c2fe4::t_abd59b1e652fe5 36-37,48,59-72,74-79,83-84,99-101,125-132
+  s_cc263e7e5c2fe4::t_01634b99bddc9d 110
+  s_cc263e7e5c2fe4::t_2f47c0b9c06544 1-31,45-47,49-51,53-58,73,80-82,85-98,102-109,111-124
+  s_cc263e7e5c2fe4::t_6be843ec792924 32-35,38-44
+  s_cc263e7e5c2fe4::t_acdb15b43a853b 52
+docs/05-jev-core.md
+  s_cc263e7e5c2fe4::t_c6d0346614ef5c 208
+packages/core/test/fixtures/golden/synth-open/cases.jsonl
+  s_cc263e7e5c2fe4::t_8edd3aa64423a7 1-6
+  s_cc263e7e5c2fe4::t_dc12bb7d3c4b04 7
+packages/core/test/fixtures/golden/synth-closed/cases.jsonl
+  s_cc263e7e5c2fe4::t_deb01374fa57dd 8
+  s_cc263e7e5c2fe4::t_63ab0d0c9bd61e 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8eb562eda9f05b38e3f46fe715d849aa30984f7d",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
