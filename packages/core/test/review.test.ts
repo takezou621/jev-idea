@@ -90,6 +90,22 @@ describe("loadReviewTargets — 分類対象と ref", () => {
     const targets = loadReviewTargets(dir);
     expect(targets.map((t) => t.ref)).toEqual(["jev-2026-09-19.jsonl:2"]);
   });
+
+  it("status: failed の failMode 経路（closed のゲート閉鎖など）は分類対象外 — 判定の正誤ではなく故障", () => {
+    const dir = tempDir("jev-review-failed-");
+    writeLog(dir, "jev-2026-09-19.jsonl", [
+      entryJson({
+        point_id: "synth-closed",
+        status: "failed",
+        action: "block",
+        reasons: ["判定を実行できなかったためゲートを閉じた (point: synth-closed)"],
+        fail_mode: "closed",
+        error: "provider: boom",
+      }),
+      entryJson({ point_id: "synth-open", status: "failed", action: "pass", fail_mode: "open" }),
+    ]);
+    expect(loadReviewTargets(dir)).toHaveLength(0);
+  });
 });
 
 describe("recordClassification / loadClassifications — 追記・後勝ち", () => {
@@ -109,6 +125,24 @@ describe("recordClassification / loadClassifications — 追記・後勝ち", ()
 
   it("分類していない ref は未分類（Map に載らない）", () => {
     expect(loadClassifications(dir).get("jev-2026-09-19.jsonl:3")).toBeUndefined();
+  });
+
+  it("reviews.jsonl の壊れた行は行番号付きで拒否する（黙ってスキップすると tp のはずの分類が消えたように見える）", () => {
+    const dir = tempDir("jev-review-broken-cls-");
+    writeFileSync(join(dir, "reviews.jsonl"), "not json\n");
+    expect(() => loadClassifications(dir)).toThrow(/reviews\.jsonl:1: invalid JSON/);
+  });
+
+  it("ref 欠落・classification 不正の行も行番号付きで拒否する", () => {
+    const dir = tempDir("jev-review-bad-cls-");
+    writeFileSync(join(dir, "reviews.jsonl"), `${JSON.stringify({ at: "t", classification: "tp" })}\n`);
+    expect(() => loadClassifications(dir)).toThrow(/reviews\.jsonl:1: ref must be a non-empty string/);
+  });
+
+  it("classification が tp|fp|unclear 以外の行も行番号付きで拒否する", () => {
+    const dir = tempDir("jev-review-bad-cls-");
+    writeFileSync(join(dir, "reviews.jsonl"), `${JSON.stringify({ at: "t", ref: "x.jsonl:1", classification: "maybe" })}\n`);
+    expect(() => loadClassifications(dir)).toThrow(/reviews\.jsonl:1: classification must be tp\|fp\|unclear/);
   });
 });
 
@@ -179,7 +213,7 @@ describe("review の 1 サイクル（#4 DoD 2: 判定 → 人間分類 → ゴ�
         model: "review-e2e-stub",
       }),
       logDir,
-      label: "review-e2e",
+      label: "mj-review-e2e",
       project: "review-test",
     });
     expect(run.action).toEqual({ kind: "pass" });

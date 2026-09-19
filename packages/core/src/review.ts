@@ -40,9 +40,14 @@ export type ReviewReport = {
   by_point: { point_id: string; counts: ReviewCounts }[];
 };
 
-/** block か would-block のログだけが tp/fp 分類の対象（docs/05） */
+/**
+ * block か would-block のログだけが tp/fp 分類の対象（docs/05）。status:
+ * "judged" に限定する — failMode 経路（status: "failed"）の block は判定の
+ * 正誤ではなく故障であり、tp/fp 表の分母に入れると品質指標が濁る
+ * （docs/05「判定失敗の failMode 経路は would-block ではない」と同型の分離）
+ */
 function isReviewTarget(e: LogEntry): boolean {
-  return e.action === "block" || e.would_block !== undefined;
+  return e.status === "judged" && (e.action === "block" || e.would_block !== undefined);
 }
 
 /** logDir の判定ログを走査し、分類対象のエントリを決定的な順序（ファイル名・行番号）で返す */
@@ -65,14 +70,32 @@ export function loadReviewTargets(logDir?: string): ReviewEntry[] {
   return out;
 }
 
-/** 分類の読み込み。同一 ref に複数レコードがある場合は**後勝ち**（docs/05 追記・後勝ち） */
+/**
+ * 分類の読み込み。同一 ref に複数レコードがある場合は**後勝ち**（docs/05 追記・後勝ち）。
+ * 壊れた行は `reviews.jsonl:<行番号>` 付きで拒否する（golden.ts parseJsonl と同じ
+ * 流儀。黙ってスキップすると tp にしたはずの分類が消えたように見える）
+ */
 export function loadClassifications(logDir?: string): Map<string, ReviewRecord> {
-  const file = join(resolveLogDir(logDir), "reviews.jsonl");
+  const name = "reviews.jsonl";
+  const file = join(resolveLogDir(logDir), name);
   const latest = new Map<string, ReviewRecord>();
   if (!existsSync(file)) return latest;
-  for (const line of readFileSync(file, "utf8").split("\n")) {
+  for (const [i, line] of readFileSync(file, "utf8").split("\n").entries()) {
     if (line.trim().length === 0) continue;
-    const r = JSON.parse(line) as ReviewRecord;
+    const at = (m: string) => `${name}:${i + 1}: ${m}`;
+    let r: ReviewRecord;
+    try {
+      r = JSON.parse(line) as ReviewRecord;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(at(`invalid JSON (${msg})`));
+    }
+    if (typeof r.ref !== "string" || r.ref.length === 0) {
+      throw new Error(at("ref must be a non-empty string"));
+    }
+    if (r.classification !== "tp" && r.classification !== "fp" && r.classification !== "unclear") {
+      throw new Error(at("classification must be tp|fp|unclear"));
+    }
     latest.set(r.ref, r);
   }
   return latest;

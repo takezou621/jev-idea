@@ -6,8 +6,10 @@
  *   jev-review list [--dir <log-dir>]
  *     block / would-block の判定ログを走査順（ファイル名・行番号）で連番表示。
  *     未分類は [?]、分類済みは [tp] / [fp] / [unclear]
- *   jev-review <番号> tp|fp|unclear [メモ...] [--dir <log-dir>]
+ *   jev-review <番号|ref> tp|fp|unclear [メモ...] [--dir <log-dir>]
  *     対応するログ行への分類を追記する（後勝ち。覆した経過も reviews.jsonl に残る）。
+ *     番号は list の走査順。list と分類の間にログが追記されて番号がずれうる
+ *     場合は ref 形式（jev-YYYY-MM-DD.jsonl:<行番号>）で指定する。
  *     tp はゴールデン化の材料
  *   jev-review report [--dir <log-dir>]
  *     label 接頭辞別（golden- / mj- 等はテスト由来。接頭辞なしは実運用）と
@@ -26,30 +28,7 @@ import {
   type ReviewEntry,
 } from "../review.js";
 import type { LogEntry } from "../log.js";
-
-/** フラグの値を取り出す。フラグがあるのに値が欠落・別フラグならエラーにする */
-function argValue(args: string[], flag: string): string | undefined {
-  const i = args.indexOf(flag);
-  if (i < 0) return undefined;
-  const v = args[i + 1];
-  if (v === undefined || v.startsWith("--")) {
-    throw new Error(`missing value for ${flag}`);
-  }
-  return v;
-}
-
-/** 位置引数（flags とその値を除いた引数）を取り出す */
-function positional(args: string[], flags: string[]): string[] {
-  const skip = new Set<number>();
-  for (const f of flags) {
-    // 同一フラグが複数回現れても全部スキップする（誤用時に残片が位置引数に混ざらないように）
-    for (let i = args.indexOf(f); i >= 0; i = args.indexOf(f, i + 1)) {
-      skip.add(i);
-      skip.add(i + 1);
-    }
-  }
-  return args.filter((_, i) => !skip.has(i));
-}
+import { argValue, positional } from "./cli-util.js";
 
 const CLASSES: readonly Classification[] = ["tp", "fp", "unclear"];
 
@@ -100,10 +79,11 @@ async function main(): Promise<number> {
     return 0;
   }
 
-  // <番号> tp|fp|unclear [メモ...]
-  const num = Number(first);
-  if (!Number.isInteger(num) || num < 1) {
-    console.error("usage: jev-review <list|report|<番号> tp|fp|unclear [メモ...]>");
+  // <番号|ref> tp|fp|unclear [メモ...]
+  const key = first ?? "";
+  const isNumber = /^\d+$/.test(key);
+  if (!isNumber && !/^\S+\.jsonl:\d+$/.test(key)) {
+    console.error("usage: jev-review <list|report|<番号|ref> tp|fp|unclear [メモ...]>");
     return 1;
   }
   const args = positional(rest, ["--dir"]);
@@ -114,13 +94,19 @@ async function main(): Promise<number> {
   }
   const note = args.slice(1).join(" ");
   const targets = loadReviewTargets(logDir);
-  const target = targets[num - 1];
+  const target = isNumber
+    ? targets[Number(key) - 1]
+    : targets.find((t) => t.ref === key);
   if (!target) {
-    console.error(`no such entry: ${num} (run "jev-review list" first, ${targets.length} entries now)`);
+    console.error(
+      isNumber
+        ? `no such entry: ${key} (run "jev-review list" first, ${targets.length} entries now)`
+        : `no such ref: ${key} (run "jev-review list" first, ${targets.length} entries now)`,
+    );
     return 1;
   }
   recordClassification(logDir, target.ref, cls, note === "" ? undefined : note);
-  console.log(`classified ${cls}: ${target.ref} (${target.entry.point_id})`);
+  console.log(`classified ${cls}: ${target.ref} (${target.entry.point_id}) ${describe(target.entry)}`);
   return 0;
 }
 
