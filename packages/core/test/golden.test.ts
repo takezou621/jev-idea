@@ -1,6 +1,6 @@
 /**
  * 合成ゴールデン回帰（docs/05「ログ・ゴールデン・tp/fp 分類」・#4 DoD 1）。
- * fixtures の合成ゴールデン（32 ケース。expected は人手確定 — jsonl の note に
+ * fixtures の合成ゴールデン（33 ケース。expected は人手確定 — jsonl の note に
  * 手計算の根拠を残す）を runGolden で回す。実 API を叩かない。
  * 各ポイントに注入ケース（data 内指示文 → expected は指示に従わない本来の判定。
  * docs/05「各判定ポイントのゴールデンに注入ケース 1 件以上必須」）を含む。
@@ -118,5 +118,37 @@ describe("FLAKY — 境界で揺れる同一入力を分母から外す（docs/0
     expect(report.results[0]!.status).toBe("flaky");
     // flaky は total に数えるが pass / fail には入らない（分母から外れる）
     expect(report.summary).toEqual({ total: 1, pass: 0, fail: 0, unset: 0, flaky: 1 });
+  });
+});
+
+describe("loadGoldenCases — レコード検証（expected は人手編集対象のため再生前に弾く）", () => {
+  const dir = mkdtempSync(join(tmpdir(), "jev-golden-invalid-"));
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("attempts 空のレコードはファイル名・行番号付きで拒否する（応答未再生のまま failMode 経路で pass にならない）", async () => {
+    mkdirSync(join(dir, "synth-open"), { recursive: true });
+    writeFileSync(
+      join(dir, "synth-open", "cases.jsonl"),
+      `${JSON.stringify({ case: "bad", evidence: { meta: [], data: [] }, attempts: [], expected_action: { kind: "pass" } })}\n`,
+    );
+    expect(() => loadGoldenCases(dir, "synth-open")).toThrow(/cases\.jsonl:1: attempts must be a non-empty array/);
+  });
+
+  it("expected_action が Action 判別共用体でないレコードは拒否する", () => {
+    writeFileSync(
+      join(dir, "synth-open", "cases.jsonl"),
+      `${JSON.stringify({ case: "bad", evidence: { meta: [], data: [] }, attempts: [{ completion: { type: "score", score: 2, confidence: 0.9 } }], expected_action: null })}\n`,
+    );
+    expect(() => loadGoldenCases(dir, "synth-open")).toThrow(/cases\.jsonl:1: expected_action/);
+  });
+
+  it("fail_attempt が attempts の範囲外のレコードは拒否する（失敗が起きず failMode 経路のつもりのケースが通常実行になるのを防ぐ）", () => {
+    writeFileSync(
+      join(dir, "synth-open", "cases.jsonl"),
+      `${JSON.stringify({ case: "bad", evidence: { meta: [], data: [] }, attempts: [{ completion: { type: "score", score: 2, confidence: 0.9 } }], fail_attempt: 2, expected_action: { kind: "pass" } })}\n`,
+    );
+    expect(() => loadGoldenCases(dir, "synth-open")).toThrow(/cases\.jsonl:1: fail_attempt must be an integer in \[1, 1\]/);
   });
 });

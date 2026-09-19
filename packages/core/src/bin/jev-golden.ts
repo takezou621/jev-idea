@@ -19,14 +19,21 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { readFileSync } from "node:fs";
-import { createGoldenCase, markFlaky, runGolden } from "../golden.js";
+import { createGoldenCase, loadGoldenCases, markFlaky, runGolden } from "../golden.js";
 import { SYNTH_POINTS } from "../synth-points.js";
 
 const DEFAULT_GOLDEN_DIR = join(homedir(), ".jev", "golden");
 
+/** フラグの値を取り出す。フラグがあるのに値が欠落・別フラグならエラーにする
+ *  （黙って既定値に落ちると意図しない golden-dir に書き込む事故になる） */
 function argValue(args: string[], flag: string): string | undefined {
   const i = args.indexOf(flag);
-  return i >= 0 ? args[i + 1] : undefined;
+  if (i < 0) return undefined;
+  const v = args[i + 1];
+  if (v === undefined || v.startsWith("--")) {
+    throw new Error(`missing value for ${flag}`);
+  }
+  return v;
 }
 
 /** 位置引数（flags とその値を除いた引数）を取り出す */
@@ -77,6 +84,12 @@ async function main(): Promise<number> {
           console.error(`--attempts must be a JSON array with at least 1 attempt (got: ${attemptsFile})`);
           return 1;
         }
+        // fail_attempt が範囲外だと provider 失敗が一度も起きず、failMode 経路の
+        // つもりのケースが通常実行として通ってしまう
+        if (failAttempt !== undefined && failAttempt > attempts.length) {
+          console.error(`--fail-attempt must be <= number of attempts (${attempts.length})`);
+          return 1;
+        }
         createGoldenCase(dir, pointId, {
           case: caseName,
           evidence: JSON.parse(readFileSync(evidenceFile, "utf8")),
@@ -110,6 +123,18 @@ async function main(): Promise<number> {
       const ref = positional(rest, ["--note", "--dir"])[0];
       if (!ref) {
         console.error("usage: jev-golden flaky <point-id>/<case> [--note \"...\"]");
+        return 1;
+      }
+      // 存在しない ref を成功扱いにしない（runGolden は一致するケースを除外しない）
+      const sep = ref.indexOf("/");
+      const pointId = sep >= 0 ? ref.slice(0, sep) : "";
+      const caseName = sep >= 0 ? ref.slice(sep + 1) : "";
+      if (!pointId || !caseName || !knownPoints.has(pointId)) {
+        console.error(`ref must be <known-point-id>/<case> (known: ${[...knownPoints].sort().join(", ")})`);
+        return 1;
+      }
+      if (!loadGoldenCases(dir, pointId).some((c) => c.case === caseName)) {
+        console.error(`unknown case: ${ref} (create it first)`);
         return 1;
       }
       markFlaky(dir, ref, argValue(rest, "--note"));

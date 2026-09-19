@@ -77,7 +77,49 @@ function parseJsonl<T>(file: string): T[] {
 }
 
 export function loadGoldenCases(goldenDir: string, pointId: string): GoldenCase[] {
-  return parseJsonl<GoldenCase>(casesFile(goldenDir, pointId));
+  const file = casesFile(goldenDir, pointId);
+  return parseJsonl<GoldenCase>(file).map((c, i) => {
+    validateGoldenCase(c, file, i + 1);
+    return c;
+  });
+}
+
+/** レコード内容の検証（expected は人手編集対象 — 編集ミスを再生前に弾く）。
+ *  緩い検証では応答未再生のケースが failMode 経路で expected に一致し pass になる */
+function validateGoldenCase(c: GoldenCase, file: string, line: number): void {
+  const at = (m: string) => `${file}:${line}: ${m}`;
+  if (typeof c.case !== "string" || c.case.length === 0) {
+    throw new Error(at("case must be a non-empty string"));
+  }
+  const ev = c.evidence as Evidence | undefined;
+  if (!ev || !Array.isArray(ev.meta) || !Array.isArray(ev.data)) {
+    throw new Error(at("evidence.meta and evidence.data must be arrays"));
+  }
+  if (!Array.isArray(c.attempts) || c.attempts.length < 1) {
+    throw new Error(at("attempts must be a non-empty array"));
+  }
+  if (
+    c.fail_attempt !== undefined &&
+    (!Number.isInteger(c.fail_attempt) || c.fail_attempt < 1 || c.fail_attempt > c.attempts.length)
+  ) {
+    throw new Error(at(`fail_attempt must be an integer in [1, ${c.attempts.length}]`));
+  }
+  if (c.expected_action !== "UNSET") {
+    const a = c.expected_action as Action | null;
+    const kinds = ["pass", "block", "warn", "escalate"];
+    if (!a || typeof a !== "object" || !kinds.includes(a.kind)) {
+      throw new Error(at(`expected_action must be "UNSET" or an action with kind ${kinds.join("|")}`));
+    }
+    if (a.kind === "block" && typeof a.reason !== "string") {
+      throw new Error(at("expected block action requires a reason string"));
+    }
+    if (a.kind === "warn" && typeof a.note !== "string") {
+      throw new Error(at("expected warn action requires a note string"));
+    }
+    if (a.kind === "escalate" && typeof a.question !== "string") {
+      throw new Error(at("expected escalate action requires a question string"));
+    }
+  }
 }
 
 /** FLAKY リスト（docs/05）。ref は "point-id/case" */
