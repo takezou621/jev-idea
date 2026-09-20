@@ -3,7 +3,8 @@
 `sample.ts`（アサーション `adult-age` の宣言 + 使用）を材料に、Claude Code の
 Stop フック（`jev-stop` CLI）が「このターンで触れたアサーション」を事実として
 表示する様子を確認する。observe 中のため停止は妨げない（記録と表示のみ。実
-block は #19 以降）。
+block は #19 以降）。この README は docs/08（MVP セットアップ手順）の手順 6 が
+参照する動作確認サンプル。
 
 ## 前提
 
@@ -14,12 +15,15 @@ block は #19 以降）。
 
 ## 確認手順
 
-1. **検出**: `examples/age/sample.ts` の `register` に何らかの変更をする
-   （コメント 1 行の追加でよい）。ターンを終える（Stop する）と、フックが
-   `systemMessage` で次の事実を表示する:
+「**通る**変更」と「**would-block になる**変更」を各 1 件ずつ試す（docs/08 手順 6）:
+
+1. **通る変更（検出はされる）**: `examples/age/sample.ts` の `register` に
+   コメント 1 行など検証に影響しない変更をしてターンを終える（Stop する）と、
+   フックが `systemMessage` で次の事実を表示する:
    - `diff が触れたアサーション: adult-age`
    - `req-assertion-a1: …` / `req-assertion-a23: …`（jev-judge の summary。p は含まれない）
-2. **違反変更**: `register` に検証を通らない経路を足して Stop する。例:
+2. **would-block になる変更（observe 中は記録と表示のみで Stop は妨げない）**: `register` に検証を
+   通らない経路を足して Stop する。例:
 
    ```ts
    export function register(age: number): RegisteredAge {
@@ -31,7 +35,8 @@ block は #19 以降）。
    ```
 
    判定 (a) の迂回観点（質問 1）の結果が事実として表示される（observe 中のため
-   block はされない。would-block は判定ログに記録される）。`checkAdultAge` 自体は
+   block はされない。表示は pass 変換後の summary「bypass=true → pass」で、
+   would-block の事実は判定ログに記録される）。`checkAdultAge` 自体は
    境界外（17・100 など）を violation で返すため、迂回経路は「検証が存在するのに
    通らない」実質的な違反になる
 3. **クリーン**: 変更を commit または stash して Stop すると、何も表示せずに
