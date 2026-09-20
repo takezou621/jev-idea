@@ -1,6 +1,6 @@
 /**
  * 合成ゴールデン回帰（docs/05「ログ・ゴールデン・tp/fp 分類」・#4 DoD 1）。
- * fixtures の合成ゴールデン（33 ケース。expected は人手確定 — jsonl の note に
+ * fixtures の合成ゴールデン（54 ケース。expected は人手確定 — jsonl の note に
  * 手計算の根拠を残す）を runGolden で回す。実 API を叩かない。
  * 各ポイントに注入ケース（data 内指示文 → expected は指示に従わない本来の判定。
  * docs/05「各判定ポイントのゴールデンに注入ケース 1 件以上必須」）を含む。
@@ -18,12 +18,23 @@ import {
   runGolden,
 } from "../src/golden.js";
 import { SYNTH_POINTS } from "../src/synth-points.js";
+import { REQ_ASSERTION_A1, REQ_ASSERTION_A23 } from "../src/points/req-assertion-a.js";
 
 const fixturesDir = fileURLToPath(new URL("./fixtures/golden", import.meta.url));
 
+const POINTS = [...SYNTH_POINTS, REQ_ASSERTION_A1, REQ_ASSERTION_A23];
+const ALL_POINT_IDS = [
+  "req-assertion-a1",
+  "req-assertion-a23",
+  "synth-boolean",
+  "synth-closed",
+  "synth-observe",
+  "synth-open",
+];
+
 describe("合成ゴールデン回帰（#4 DoD 1: 20 件以上で回帰が動く）", () => {
   it("fixtures の全ゴールデンケース（20 件以上）が expected と一致する", async () => {
-    const report = await runGolden(fixturesDir, SYNTH_POINTS);
+    const report = await runGolden(fixturesDir, POINTS);
     // DoD: 合成ゴールデン 20 件以上
     expect(report.summary.total).toBeGreaterThanOrEqual(20);
     // expected は人手確定（cases.jsonl の expected_action）。全ケース一致
@@ -34,13 +45,14 @@ describe("合成ゴールデン回帰（#4 DoD 1: 20 件以上で回帰が動く
       unset: 0,
       flaky: 0,
     });
-    // 合成ゴールデンは 4 ポイントに分配されている（closed / observe / open / boolean）
+    // 合成ゴールデンは 6 ポイントに分配されている
+    // （synth 4 種 + #18 の PR 判定 (a) 2 ポイント）
     const pointIds = new Set(report.results.map((r) => r.point_id));
-    expect([...pointIds].sort()).toEqual(["synth-boolean", "synth-closed", "synth-observe", "synth-open"]);
+    expect([...pointIds].sort()).toEqual(ALL_POINT_IDS);
   });
 
   it("closed ゲートのゴールデンに provider 失敗経路が含まれる（failMode closed → block）", async () => {
-    const report = await runGolden(fixturesDir, SYNTH_POINTS);
+    const report = await runGolden(fixturesDir, POINTS);
     const failCase = report.results.find((r) => r.point_id === "synth-closed" && r.case === "provider-failure");
     expect(failCase?.status).toBe("pass");
     expect(failCase?.actual).toEqual({
@@ -49,9 +61,22 @@ describe("合成ゴールデン回帰（#4 DoD 1: 20 件以上で回帰が動く
     });
   });
 
+  it("observe 中の block 型ポイント（req-assertion-a1）の block は would_block 化して pass を返す", async () => {
+    const report = await runGolden(fixturesDir, POINTS);
+    // observe 変換後の action が比較対象（runGolden の契約）。block 相当のケースは
+    // どれも expected pass で、escalate / fail-open は変換されない
+    for (const c of ["true-block-observed", "boundary-true", "stable-majority-true"]) {
+      const r = report.results.find((x) => x.point_id === "req-assertion-a1" && x.case === c);
+      expect(r?.status, `${c} が expected 不一致`).toBe("pass");
+      expect(r?.actual).toEqual({ kind: "pass" });
+    }
+    const escalate = report.results.find((x) => x.point_id === "req-assertion-a1" && x.case === "mid-escalate");
+    expect(escalate?.actual?.kind).toBe("escalate");
+  });
+
   it("各判定ポイントに注入ケース（data 内指示文）が 1 件以上ある（docs/05・AGENTS.md 必須）", async () => {
-    const report = await runGolden(fixturesDir, SYNTH_POINTS);
-    for (const pointId of ["synth-boolean", "synth-closed", "synth-observe", "synth-open"]) {
+    const report = await runGolden(fixturesDir, POINTS);
+    for (const pointId of ALL_POINT_IDS) {
       const injections = report.results.filter((r) => r.point_id === pointId && r.case.startsWith("injection"));
       expect(injections.length, `${pointId} に注入ケースがない`).toBeGreaterThanOrEqual(1);
       // 注入ケースは expected（応答に基づく本来の判定）と一致 — data 指示に従わない
