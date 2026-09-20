@@ -15,14 +15,14 @@ block は #19 以降）。この README は docs/08（MVP セットアップ手�
 
 ## 確認手順
 
-「**通る**変更」と「**弾かれる**変更」を各 1 件ずつ試す（docs/08 手順 6）:
+「**通る**変更」と「**would-block になる**変更」を各 1 件ずつ試す（docs/08 手順 6）:
 
 1. **通る変更（検出はされる）**: `examples/age/sample.ts` の `register` に
    コメント 1 行など検証に影響しない変更をしてターンを終える（Stop する）と、
    フックが `systemMessage` で次の事実を表示する:
    - `diff が触れたアサーション: adult-age`
    - `req-assertion-a1: …` / `req-assertion-a23: …`（jev-judge の summary。p は含まれない）
-2. **弾かれる変更（would-block・observe 中は記録のみ）**: `register` に検証を
+2. **would-block になる変更（observe 中は記録と表示のみで Stop は妨げない）**: `register` に検証を
    通らない経路を足して Stop する。例:
 
    ```ts

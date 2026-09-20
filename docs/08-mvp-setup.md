@@ -67,7 +67,7 @@ summary に「判定に失敗」が載り observe 記録は積めない（fork P
    `systemMessage` に「diff が触れたアサーション: adult-age」と判定 summary が
    表示される（summary に載るのは criterion の verdict と action。
    p・confidence は出ない）
-2. **弾かれる変更**: `register` に検証を通らない経路を足してターンを終える →
+2. **would-block になる変更**: `register` に検証を通らない経路を足してターンを終える →
    summary が表示され、would-block（本来の reason）は判定ログに記録される
    （observe 中は止まらない。人間は判定ログの reason を読んで tp/fp を分類する）
 3. **クリーン**: 変更を戻してターンを終える → 何も表示されない（判定も走らない）
@@ -116,6 +116,7 @@ log-dir の所在:
 ```sh
 node packages/core/scripts/dev-stub-api.mjs 8787   # 別ターミナル
 export TYPESAFE_BASE_URL=http://127.0.0.1:8787
+unset TYPESAFE_API_KEY   # 実キーを設定済みの場合は解除する（スタブにキーを送らない）
 ```
 
 スタブの既定 answers は criteria `completion` のみで、PR 判定 (a) の criteria
@@ -133,7 +134,8 @@ CI の PR 判定 (a) と同じ条件を API キーなしで通す手順。**ス�
 **commit してから**実行する:
 
 ```sh
-# 0. would-block 側の answers でスタブを起動（別ターミナル）
+# 0. スタブを answers 付きで起し直す（付録 A 本体で起したスタブがある場合は
+#    停止してから — 同じポート 8787 を使うため重複起動は失敗する）
 cat > /tmp/jev-smoke-answers.json <<'EOF'
 {
   "bypass": { "type": "noul", "noul": 0.9 },
@@ -162,6 +164,12 @@ Stop フック（未コミット変更 `git diff HEAD` の判定）を単独で�
 ```sh
 echo "{\"cwd\":\"$PWD\"}" | node packages/core/dist/bin/jev-stop.js --log-dir /tmp/jev-smoke
 # → {"systemMessage": ...}（未コミットの迂回変更で出る。クリーンなら出力なし・exit 0）
+```
+
+検証後はスタブの向きを解除する（残すと実判定が停止済みスタブに飛ぶ）:
+
+```sh
+unset TYPESAFE_BASE_URL
 ```
 
 判定ログと `reviews.jsonl` は `--log-dir` に 0700/0600 で残る。

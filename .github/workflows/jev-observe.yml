@@ -39,9 +39,13 @@ jobs:
       - run: npm ci
       - run: npm run build --workspace=@jev/core
       - name: jev-observe (PR 判定 (a)・observe)
-        # env: GitHub Actions の secrets は明示的なマップなしでは子プロセスに
+        # env: GitHub Actions の仕様上、secrets は明示的なマップなしでは子プロセスに
         # 渡らない。未設定（fork PR 等）なら jev-observe は fail-open で緑になる
         # （docs/06 契約）
+        # 注意: この経路では PR コードから build した CLI に secret が渡る。
+        # fork PR には GitHub が secret を渡さないため外部者には届かないが、
+        # same-repo PR のコードは実行者（collaborator）を信頼することになる。
+        # trusted revision からの CLI 実行への分離は別 Issue で扱う
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         # pipefail: CLI の配線エラー（exit 1）を tee で飲ませない
