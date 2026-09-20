@@ -1,0 +1,45 @@
+docs/05-jev-core.md
+  s_cc263e7e5c2fe4::t_cbf3f8c58d0316 210
+packages/core/src/review.ts
+  s_cc263e7e5c2fe4::t_5ddd926bd8eba0 128,141
+  s_cc263e7e5c2fe4::t_a56168d9019b17 161-164,166-169,174,177-190,195
+  s_cc263e7e5c2fe4::t_63a1647352e321 15-18,29,41-48,51-52
+  s_cc263e7e5c2fe4::t_aaf814d4492d94 112-117
+packages/core/test/review.test.ts
+  s_cc263e7e5c2fe4::t_79c20d14a8f176 202-247,249-252,254-259,262-286
+  s_cc263e7e5c2fe4::t_5864b65789759a 248,253,260-261
+packages/core/test/bin-jev-review.test.ts
+  s_cc263e7e5c2fe4::t_3ddfd43eb75795 1-113
+packages/core/src/bin/jev-review.ts
+  s_cc263e7e5c2fe4::t_cdb0ab361031a3 94-97,103,107,110,116-123
+  s_cc263e7e5c2fe4::t_31472629b93a67 53,73,76
+  s_cc263e7e5c2fe4::t_922d3b60b52724 68-72,74-75
+  s_cc263e7e5c2fe4::t_82f90ab81a0f40 79-81
+  s_cc263e7e5c2fe4::t_f53735a12c019a 138-139
+  s_cc263e7e5c2fe4::t_31945681424962 9,11-12,18-19
+  s_cc263e7e5c2fe4::t_9f71c67d7c1441 25,32
+  s_cc263e7e5c2fe4::t_91676cbe5494d0 31
+  s_cc263e7e5c2fe4::t_523911895b70b0 49
+  s_cc263e7e5c2fe4::t_db2a46e3fc90f2 77-78
+  s_cc263e7e5c2fe4::t_87d240964add5c 124
+docs/08-mvp-setup.md
+  s_cc263e7e5c2fe4::t_be1f4da46a5b05 89
+  s_cc263e7e5c2fe4::t_a0815ec216824d 153-154,156
+  s_cc263e7e5c2fe4::t_fa40b4a70a4331 87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "184c417a5dfefc62c73bf180a1db2db56cd6e30c",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
