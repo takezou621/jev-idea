@@ -1,0 +1,80 @@
+packages/core/src/bin/jev-observe.ts
+  s_cc263e7e5c2fe4::t_7ed1e550f29241 28
+  s_cc263e7e5c2fe4::t_a38beea68b170f 119
+  s_cc263e7e5c2fe4::t_e26c54323544fc 126
+  s_cc263e7e5c2fe4::t_763536ab8a7f71 180-185,189,193-196,198,213-229
+  s_cc263e7e5c2fe4::t_af2bad1e5831cf 27
+  s_cc263e7e5c2fe4::t_de16a6aed3ce07 188,199,201
+  s_cc263e7e5c2fe4::t_0b791dd9663aea 161-164
+  s_cc263e7e5c2fe4::t_e5645dfc077c99 197
+  s_cc263e7e5c2fe4::t_f02f2fa7738f06 230,255-267
+  s_cc263e7e5c2fe4::t_a9f4c780e99651 59
+  s_cc263e7e5c2fe4::t_95b8413dec71da 100
+  s_cc263e7e5c2fe4::t_929f66bf10f83d 6,12-16,35,57,63-73,77-92,104,108,128,144,151,165,168,187,190
+  s_cc263e7e5c2fe4::t_89d6be1cb132bc 93-97,99,101
+  s_cc263e7e5c2fe4::t_dc94676ede78a7 98
+  s_8784f9d521934c::t_f3590fdd640abd 231
+examples/age/sample.ts
+  s_cc263e7e5c2fe4::t_410c234dcd6ba1 2,9,20,23-25,29,31-33
+  s_cc263e7e5c2fe4::t_b9e4a4d5b3a029 1,3-8,10-19,21-22,26-28,30,34-35
+docs/06-host-integration.md
+  s_cc263e7e5c2fe4::t_f645e3103330dd 120
+  s_cc263e7e5c2fe4::t_8ff74f76ad4590 99-104
+  s_cc263e7e5c2fe4::t_06b8418da4b28c 66-67
+  s_cc263e7e5c2fe4::t_41ac33fbca6935 88-90
+packages/core/src/mcp/jev-judge.ts
+  s_cc263e7e5c2fe4::t_b947756c692684 154-156
+packages/core/test/mcp-server.test.ts
+  s_cc263e7e5c2fe4::t_c488214d1473e0 240-241
+  s_cc263e7e5c2fe4::t_a399aac4dd2d2b 256-262,266-268
+.claude/settings.json
+  s_cc263e7e5c2fe4::t_0f12039cafe0e9 1-16
+packages/core/src/bin/jev-stop.ts
+  s_cc263e7e5c2fe4::t_77ce145d23470a 29-32
+  s_cc263e7e5c2fe4::t_d3e91fed7e8b22 95-107
+  s_cc263e7e5c2fe4::t_434cba70a3fe4b 83-87
+  s_cc263e7e5c2fe4::t_14c7797d86bee5 1-24,27-28,33-82,88-94
+  s_cc263e7e5c2fe4::t_db3ea932da697a 25-26
+docs/01-requirement-assertions.md
+  s_cc263e7e5c2fe4::t_1d4c87d9a0f49a 117-121
+  s_cc263e7e5c2fe4::t_83b00e1693abf7 111-116,122-126
+.gitignore
+  s_cc263e7e5c2fe4::t_b7992a0b85d1e6 4-6
+packages/core/test/bin-jev-stop.test.ts
+  s_cc263e7e5c2fe4::t_8cc0c06c2ec5aa 1-129,134-201
+  s_cc263e7e5c2fe4::t_6e85ae1725312e 130-133
+packages/core/package.json
+  s_cc263e7e5c2fe4::t_c3bc862979a47f 13-14
+packages/core/test/bin-jev-observe.test.ts
+  s_cc263e7e5c2fe4::t_4bb440620369f9 18
+  s_cc263e7e5c2fe4::t_ea3e5cb39d3a53 121-124,126-137
+  s_cc263e7e5c2fe4::t_8add2ff2e40dd8 125
+  s_cc263e7e5c2fe4::t_57e420d66c4f2c 201,207-209,212-214,217-221,223,230-233
+examples/age/README.md
+  s_cc263e7e5c2fe4::t_27f2a69126fe98 22-36
+  s_cc263e7e5c2fe4::t_d86de602d1ec18 1-21,37-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "56ce5183ebe84f59198efbfee31ba9b67025edf6",
+  "prompts": {},
+  "sessions": {
+    "s_8784f9d521934c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3ae4e7ed-49fa-40d4-b383-008a2b5d666b",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    },
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
