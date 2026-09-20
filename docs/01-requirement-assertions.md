@@ -108,6 +108,22 @@ CI に加えて、開発中の即時フィードバックとして Stop フッ�
 のに PR 判定を通す前の段階では、block 理由に「アサーション `adult-age` に触れた
 変更がある」と載せる（判定語ではなく事実のみ）。
 
+実装（#21）: Stop フックから `jev-stop` CLI（`jev-judge` MCP サーバー経由。CI の
+`jev-observe` と同一の実行口）を呼ぶ。設計からの確定事項:
+
+- 「このターンで触れた」は `git diff HEAD`（未コミットの tracked 変更）の**近似**。
+  ターン単位の正確な抽出は transcript 収集（docs/02・#22）の範囲。untracked
+  （新規ファイル）は対象外
+- observe 中の**判定結果**（escalate・status: failed を含む）では停止を妨げない
+  （exit 0）。検出事実は `{"systemMessage": ...}` でユーザーに表示する（Stop フックの
+  exit 0 + 素の stdout は表示されないため）。`decision: "block"` で停止を妨げる実
+  block は #19 以降。配線エラー（git 不在など判定が走らなかった場合）は jev-observe
+  と同じ分け方で非ブロックの exit 1（stderr 表示。判定の結果と混ぜない）
+- 配線はリポジトリ同梱の `.claude/settings.json`。タイムアウト時は Claude Code が
+  フック出力を破棄し判定なしで停止が続行される（fail-open 方向）
+- 判定ポイント・しきい値・evidence 組立て・2 段判定の制御は CI と同一（定義は
+  1 か所 — docs/06）。差分は diff の範囲（refspec）だけ
+
 ## Jev 判定仕様
 
 ### 判定ポイント (a): 宣言と実装の整合

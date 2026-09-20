@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { runObserve, type ObserveDeps } from "../src/bin/jev-observe.js";
+import { observeWorkingTree, runObserve, type ObserveDeps } from "../src/bin/jev-observe.js";
 import { REQ_ASSERTION_A1 } from "../src/points/req-assertion-a.js";
 import { createJevJudgeServer } from "../src/mcp/server.js";
 import type { ServerState } from "../src/mcp/protocol.js";
@@ -118,6 +118,23 @@ describe("jev-observe — 配線ロジック（#18 DoD 2）", () => {
     expect(r.summary).toContain("判定を実行しなかった");
   });
 
+  it("初回 commit 前（HEAD 不在）は配線エラーにせず skipped で終わる（Stop フックの毎ターン error を避ける）", async () => {
+    const repoDir = makeRepo();
+    const calls: JudgeCall[] = [];
+    const server = createJevJudgeServer({ provider: stubProvider(BLOCK_ANSWERS), evidenceRoot: repoDir, log: false });
+    const inner = fakeGit(repoDir, ["user.ts"])!;
+    const git: ObserveDeps["git"] = (args) => {
+      if (args[1] === "--verify") throw new Error("fatal: ambiguous argument 'HEAD'");
+      return inner(args);
+    };
+    const r = await observeWorkingTree([], { git, openClient: stubClient(server, calls) }, { cwd: repoDir });
+
+    expect(r.skipped).toBe(true);
+    expect(r.judged).toEqual([]);
+    expect(calls).toHaveLength(0);
+    expect(r.summary).toContain("初回 commit 前");
+  });
+
   it("touched を特定し、jev-judge 経由で a1 → a23 を判定する。summary に p が現れない（DoD 2）", async () => {
     const repoDir = makeRepo();
     const calls: JudgeCall[] = [];
@@ -181,30 +198,39 @@ describe("jev-observe — 配線ロジック（#18 DoD 2）", () => {
     noP(r.summary);
   });
 
-  it("evidence は paths（diff.patch・usages.txt・定義ファイル）で渡され、実ファイルが evidence root 配下に置かれる", async () => {
+  it("evidence は paths（diff.patch・usages.txt・定義ファイル）で渡され、実行ごとの一意ディレクトリ（0700/0600）に置かれる", async () => {
     const repoDir = makeRepo();
     const calls: JudgeCall[] = [];
     const server = createJevJudgeServer({ provider: stubProvider(BLOCK_ANSWERS), evidenceRoot: repoDir, log: false });
     await runObserve(BASE_ARGS, observeDeps(repoDir, server, calls));
 
-    // 既定の evidenceDir は <repoDir>/.git/jev-observe（git 追跡外。evidence root 配下）
-    const evidenceDir = join(repoDir, ".git", "jev-observe");
+    // 既定の evidenceBase は <repoDir>/.git/jev-observe（git 追跡外。evidence root 配下）。
+    // 実行ごとに一意のサブディレクトリが作られる（並行実行が a1/a23 間でファイルを差し替えない）
+    const evidenceBase = join(repoDir, ".git", "jev-observe");
     expect(calls).toHaveLength(2);
     const paths = (calls[0]!.evidence as { kind: string; paths: string[] }).paths;
-    expect(paths[0]).toBe(`${evidenceDir}/diff.patch`);
-    expect(paths[1]).toBe(`${evidenceDir}/usages.txt`);
+    expect(paths[0]!.startsWith(`${evidenceBase}/`)).toBe(true);
+    expect(paths[0]!.endsWith("/diff.patch")).toBe(true);
+    expect(paths[1]!.endsWith("/usages.txt")).toBe(true);
     expect(paths[2]).toBe(`${repoDir}/req/sample.req.ts`);
     for (const p of paths) expect(existsSync(p)).toBe(true);
-    // 組立てた evidence はサーバー側で読まれるため root 配下のみ（配線エラーにならない）
-    expect(existsSync(`${evidenceDir}/diff.patch`)).toBe(true);
+    // 機密（diff 全文）を含むためディレクトリ 0700・ファイル 0600
+    const { statSync } = await import("node:fs");
+    const runDir = paths[0]!.slice(0, paths[0]!.lastIndexOf("/"));
+    expect(statSync(runDir).mode & 0o777).toBe(0o700);
+    expect(statSync(paths[0]!).mode & 0o777).toBe(0o600);
     // usages.txt は事実のみの機械検出結果
-    const usages = readFileSync(`${evidenceDir}/usages.txt`, "utf8");
+    const usages = readFileSync(paths[1]!, "utf8");
     expect(usages).toContain("adult-age");
     expect(usages).toContain("AdultAge");
     expect(usages).toContain("function register");
     // クライアントには evidence root（リポジトリルート）が渡る
     expect(calls[0]!.env).toMatchObject({ JEV_EVIDENCE_ROOT: repoDir });
     expect(calls[0]!.cwd).toBe(repoDir);
+    // 次の実行は別ディレクトリを使う（前の実行の evidence を上書きしない）
+    await runObserve(BASE_ARGS, observeDeps(repoDir, server, calls));
+    const paths2 = (calls[2]!.evidence as { kind: string; paths: string[] }).paths;
+    expect(paths2[0]).not.toBe(paths[0]);
   });
 
   it("--base 欠落は配線エラー（usage で reject。黙って間違った diff を判定しない）", async () => {

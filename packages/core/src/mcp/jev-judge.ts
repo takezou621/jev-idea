@@ -151,10 +151,9 @@ function parseOpts(opts: unknown): { budgetMs?: number; repeats?: number } {
 /** summary は verdict と action のみ。p・confidence・回答の中身は出ない */
 function summarize(point: JudgmentPoint, j: Judgment): string {
   if (j.status === "failed") {
-    // エラー文は空白正規化 + 200 文字丸め（生応答本文に p が混入しうる出水口を
-    // 狭くする。全文は判定ログ 0700/0600 で人間のみが見る — docs/05）
-    const msg = j.error.message.replace(/\s+/g, " ").trim().slice(0, 200);
-    return `${point.id}: 判定に失敗 (${msg})。failMode ${point.failMode} に従い ${j.action.kind} を返す`;
+    // エラー本文は出さない（生応答本文に p・confidence・answers が混入しうる。
+    // 全文は判定ログ 0700/0600 で人間のみが見る — docs/05・06）
+    return `${point.id}: 判定に失敗 (詳細は判定ログを参照)。failMode ${point.failMode} に従い ${j.action.kind} を返す`;
   }
   const th = resolveThresholds(point.thresholds);
   const vs = point.criteria.map((c) => `${c.id}=${verdict(j.answers[c.id], th)}`).join(", ");

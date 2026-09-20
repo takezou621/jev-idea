@@ -1,3 +1,6 @@
 node_modules/
 dist/
 *.log
+# Claude Code のローカル設定・実行時状態（個人差・機密を含む。settings.json は同梱する）
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
