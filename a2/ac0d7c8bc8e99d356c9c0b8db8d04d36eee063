@@ -1,0 +1,27 @@
+docs/08-mvp-setup.md
+  s_cc263e7e5c2fe4::t_37b347dfee128b 137-138
+  s_cc263e7e5c2fe4::t_eb4bad67322ea5 169-174
+  s_cc263e7e5c2fe4::t_ebf509f853509f 70
+  s_cc263e7e5c2fe4::t_a502c7fae7bba2 119
+.github/workflows/jev-observe.yml
+  s_cc263e7e5c2fe4::t_71814fb9554dc6 42,45-48
+examples/age/README.md
+  s_cc263e7e5c2fe4::t_0c3335fad5a1ec 25
+  s_cc263e7e5c2fe4::t_4e14c6956e1464 18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a2ac0d7c8bc8e99d356c9c0b8db8d04d36eee063",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
