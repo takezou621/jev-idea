@@ -199,6 +199,100 @@ describe("reviewReport — 分離集計と tp/fp 表", () => {
   });
 });
 
+describe("feeling — 体感タグ（#28。docs/07 R3: ok=納得 / annoy=邪魔 / ignore=無関心）", () => {
+  it("feeling 付きで分類すると reviews.jsonl のレコードに feeling が残る", () => {
+    const dir = tempDir("jev-review-feeling-");
+    recordClassification(dir, "jev-2026-09-19.jsonl:1", "tp", "迂回は事実として検出", "annoy");
+    const rec = loadClassifications(dir).get("jev-2026-09-19.jsonl:1");
+    expect(rec?.classification).toBe("tp");
+    expect(rec?.note).toBe("迂回は事実として検出");
+    expect(rec?.feeling).toBe("annoy");
+  });
+
+  it("feeling 未指定の再分類では前の feeling を引き継ぐ（classification とメモは後勝ちのまま）", () => {
+    const dir = tempDir("jev-review-feeling-inherit-");
+    const ref = "jev-2026-09-19.jsonl:2";
+    recordClassification(dir, ref, "tp", "まず tp で記録", "ok");
+    recordClassification(dir, ref, "fp", "やはり false positive だった");
+    const rec = loadClassifications(dir).get(ref);
+    expect(rec?.classification).toBe("fp");
+    expect(rec?.note).toBe("やはり false positive だった");
+    expect(rec?.feeling).toBe("ok");
+  });
+
+  it("feeling 指定ありの再分類は上書きする", () => {
+    const dir = tempDir("jev-review-feeling-overwrite-");
+    const ref = "jev-2026-09-19.jsonl:3";
+    recordClassification(dir, ref, "tp", undefined, "annoy");
+    recordClassification(dir, ref, "tp", undefined, "ok");
+    expect(loadClassifications(dir).get(ref)?.feeling).toBe("ok");
+  });
+
+  it("feeling が ok|annoy|ignore 以外の行は行番号付きで拒否する（黙って無視すると集計から消える）", () => {
+    const dir = tempDir("jev-review-bad-feeling-");
+    writeFileSync(
+      join(dir, "reviews.jsonl"),
+      `${JSON.stringify({ at: "t", ref: "x.jsonl:1", classification: "tp", feeling: "meh" })}\n`,
+    );
+    expect(() => loadClassifications(dir)).toThrow(/reviews\.jsonl:1: feeling must be ok\|annoy\|ignore/);
+  });
+
+  it("JSON オブジェクトでない行（null・文字列）も行番号付きで拒否する（r.ref 参照の TypeError にしない）", () => {
+    const dir = tempDir("jev-review-non-object-");
+    writeFileSync(join(dir, "reviews.jsonl"), "null\n\"x\"\n");
+    expect(() => loadClassifications(dir)).toThrow(/reviews\.jsonl:1: record must be a JSON object/);
+    const ok = JSON.stringify({ at: "t", ref: "x.jsonl:1", classification: "tp" });
+    writeFileSync(join(dir, "reviews.jsonl"), `${ok}\n1\n`);
+    expect(() => loadClassifications(dir)).toThrow(/reviews\.jsonl:2: record must be a JSON object/);
+  });
+});
+
+describe("reviewReport — feeling 内訳（#28 週次サマリ。「邪魔」割合の素材）", () => {
+  it("by_prefix に feeling 内訳（ok / annoy / ignore / 未記録）が付く。テスト由来は分離したまま", () => {
+    const dir = tempDir("jev-review-feeling-report-");
+    writeLog(dir, "jev-2026-09-19.jsonl", [
+      entryJson({ point_id: "req-assertion-a1", action: "pass", would_block: { reason: "r1" } }),
+      entryJson({ point_id: "req-assertion-a1", action: "pass", would_block: { reason: "r2" } }),
+      entryJson({ point_id: "req-assertion-a1", action: "pass", would_block: { reason: "r3" }, label: "mj-x" }),
+      entryJson({ point_id: "req-assertion-a23", action: "pass", would_block: { reason: "r4" } }),
+    ]);
+    recordClassification(dir, "jev-2026-09-19.jsonl:1", "tp", undefined, "annoy");
+    recordClassification(dir, "jev-2026-09-19.jsonl:2", "fp"); // 分類済みだが feeling 未記録
+    recordClassification(dir, "jev-2026-09-19.jsonl:3", "tp", undefined, "ok");
+    // :4 は分類レコード自体が未作成（未分類）
+
+    const report = reviewReport(dir);
+    expect(report.by_prefix.find((r) => r.prefix === "production")?.feelings).toEqual({
+      ok: 0,
+      annoy: 1,
+      ignore: 0,
+      // feeling 未記録の分類済み（:2）と未分類（:4）の両方が unrecorded
+      unrecorded: 2,
+    });
+    expect(report.by_prefix.find((r) => r.prefix === "mj")?.feelings).toEqual({
+      ok: 1,
+      annoy: 0,
+      ignore: 0,
+      unrecorded: 0,
+    });
+  });
+
+  it("by_point は tp/fp 表のみで feeling を含めない（週次サマリの内訳は prefix 別に限定）", () => {
+    const dir = tempDir("jev-review-feeling-by-point-");
+    writeLog(dir, "jev-2026-09-19.jsonl", [
+      entryJson({ point_id: "req-assertion-a1", action: "pass", would_block: { reason: "r1" } }),
+    ]);
+    recordClassification(dir, "jev-2026-09-19.jsonl:1", "tp", undefined, "annoy");
+    const report = reviewReport(dir);
+    expect(report.by_point).toEqual([
+      {
+        point_id: "req-assertion-a1",
+        counts: { total: 1, unclassified: 0, tp: 1, fp: 0, unclear: 0 },
+      },
+    ]);
+  });
+});
+
 describe("review の 1 サイクル（#4 DoD 2: 判定 → 人間分類 → ゴールデン化）", () => {
   const logDir = tempDir("jev-review-e2e-logs-");
   const goldenDir = tempDir("jev-review-e2e-golden-");
