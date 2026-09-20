@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/packages/core/dist/bin/jev-stop.js\"",
+            "timeout": 300,
+            "statusMessage": "jev 判定 (a) を実行中…"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -237,7 +237,8 @@ describe("fail-open（DoD 3: status failed + failMode action + ログ記録）",
     expect(r.structuredContent).toEqual({
       status: "failed",
       action: { kind: "pass" },
-      summary: "synth-open: 判定に失敗 (provider: boom)。failMode open に従い pass を返す",
+      // エラー本文は summary に出さない（生応答本文に p が混入しうるため。ログのみ）
+      summary: "synth-open: 判定に失敗 (詳細は判定ログを参照)。failMode open に従い pass を返す",
     });
     expect(log).toHaveLength(1);
     expect(log[0]).toMatchObject({ status: "failed", action: "pass", label: "mcp", error: expect.stringContaining("provider: boom") });
@@ -252,14 +253,19 @@ describe("fail-open（DoD 3: status failed + failMode action + ログ記録）",
   });
 
   it("budgetMs 超過（signal を無視しない provider）でも failed + failMode action", async () => {
-    const state = serverWith(({ signal }) =>
-      new Promise((_resolve, reject) => {
-        signal.addEventListener("abort", () => reject(new Error("budget exceeded (50ms)")));
-      }),
+    const log: LogEntry[] = [];
+    const state = serverWith(
+      ({ signal }) =>
+        new Promise((_resolve, reject) => {
+          signal.addEventListener("abort", () => reject(new Error("budget exceeded (50ms)")));
+        }),
+      log,
     );
     const r = await state.call("judge", { point: "synth-open", opts: { budgetMs: 50 } });
     expect(r.structuredContent).toMatchObject({ status: "failed", action: { kind: "pass" } });
-    expect((r.structuredContent as { summary: string }).summary).toContain("budget");
+    // summary にエラー本文は出さない（生応答本文に p が混入しうるため）。理由はログのみ
+    expect((r.structuredContent as { summary: string }).summary).not.toContain("budget");
+    expect(log[0]).toMatchObject({ status: "failed", error: expect.stringContaining("budget") });
   });
 });
 

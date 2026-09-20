@@ -10,7 +10,8 @@
     "jev-golden": "./dist/bin/jev-golden.js",
     "jev-judge": "./dist/bin/jev-judge.js",
     "jev-observe": "./dist/bin/jev-observe.js",
-    "jev-review": "./dist/bin/jev-review.js"
+    "jev-review": "./dist/bin/jev-review.js",
+    "jev-stop": "./dist/bin/jev-stop.js"
   },
   "exports": {
     ".": {

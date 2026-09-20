@@ -63,7 +63,8 @@
   を正とする（docs/05 の型に合わせる）
 - `summary` は宣言済み criterion の verdict（true/false/unknown）と action のみ。
   例: `synth-open: completion=false → block`。failed 時は
-  `判定点id: 判定に失敗 (理由)。failMode <mode> に従い <action> を返す`
+  `判定点id: 判定に失敗 (詳細は判定ログを参照)。failMode <mode> に従い <action> を返す`
+  （エラー本文は summary に出さない。下記の p 混入防止と同じ理由）
 - **evidence のマージ規則**: サーバーは point.evidence() を 1 回呼んで base を
   取り、呼び出し evidence を **data に追記**する（`meta: base.meta,
   data: [...base.data, ...呼び出し分]`）。meta の組立ては point 定義のみが行い、
@@ -84,8 +85,9 @@
   上限超過・不正 opts）は `isError: true` のツール結果。judge の失敗
   （`status: "failed"` + failMode に従う action）は契約どおりの正常な結果なので
   isError を立てない
-- failed 時 `summary` のエラー部分は空白正規化 + 200 文字丸め（生応答本文に p が
-  混入しうる出水口を狭くする）。エラー全文は判定ログ（0700/0600）で人間のみが見る
+- failed 時 `summary` に**エラー本文を含めない**（生応答本文に p・confidence・
+  answers が混入しうるため。文字数の丸めでは出水口を狭めるだけしかならない）。
+  エラー全文は判定ログ（0700/0600）で人間のみが見る
 - 判定ログは `label: "mcp"` で記録される（`jev-review` のレポートで mcp グループに
   分離される）
 
@@ -94,6 +96,12 @@
 - **Claude Code**: リポジトリルートの `.mcp.json`（本リポジトリに同梱）:
   `{"mcpServers": {"jev-judge": {"command": "node", "args": ["packages/core/dist/bin/jev-judge.js"]}}}`。
   事前に `packages/core` で `npm run build` が必要
+- **Claude Code（Stop フック・#21）**: リポジトリ同梱の `.claude/settings.json` が
+  Stop 時に `jev-stop` CLI（`packages/core/dist/bin/jev-stop.js`）を起動する。
+  判定の実行口は同じく jev-judge（jev-observe と同一）。timeout は 300 秒
+  （タイムアウト時はフック出力が破棄され、判定なしで停止が続行される — fail-open
+  方向）。observe 中は実 block しないため stop_hook_active によるループ保護に
+  非依存
 - **goose**: `goose configure` の extensions で stdio MCP サーバーとして同じ
   コマンドを登録する。recipe 経由で使う場合は recipe の `extensions` に書く
 - プロバイダは `TYPESAFE_API_KEY`（未設定なら `TYPESAFE_BASE_URL` をスタブに向けて
@@ -109,6 +117,7 @@
 |---|---|---|
 | 判定の呼び出し | MCP ツール呼び出し（エージェント・フックから） | MCP ツール呼び出し（エージェント・recipe から） |
 | 収集（docs/02） | PostToolUse → claude-code アダプタ | PostToolUse 相当フック → goose アダプタ |
+| 完了判定（docs/01 判定 (a) の即時フィードバック） | Stop フック → `jev-stop` CLI（observe 中は systemMessage 表示のみ・#21） | 未対応（完了判定相当のフックは #6 で仕様確定時に検討） |
 | closed ゲート（機密） | PreToolUse（deny） | PreToolUse（exit code で deny） |
 | ループ系（docs/04） | スキル / エージェント | recipe |
 
