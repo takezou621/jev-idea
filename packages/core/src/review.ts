@@ -103,6 +103,9 @@ export function loadClassifications(logDir?: string): Map<string, ReviewRecord> 
       const msg = err instanceof Error ? err.message : String(err);
       throw new Error(at(`invalid JSON (${msg})`));
     }
+    if (typeof r !== "object" || r === null) {
+      throw new Error(at("record must be a JSON object"));
+    }
     if (typeof r.ref !== "string" || r.ref.length === 0) {
       throw new Error(at("ref must be a non-empty string"));
     }

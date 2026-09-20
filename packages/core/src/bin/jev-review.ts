@@ -33,6 +33,7 @@ import {
   type ReviewCounts,
   type ReviewEntry,
 } from "../review.js";
+import { pathToFileURL } from "node:url";
 import type { LogEntry } from "../log.js";
 import { argValue, positional } from "./cli-util.js";
 
@@ -140,11 +141,16 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
   return 0;
 }
 
-main()
-  .then((code) => {
-    process.exitCode = code;
-  })
-  .catch((err) => {
-    console.error(err instanceof Error ? err.message : String(err));
-    process.exitCode = 1;
-  });
+// bin として直接実行されたときだけ main を動かす（テストがこのモジュールを
+// import する。ガードがないと import 時に main が走り、usage エラーの出力と
+// exitCode 汚染が起きる — jev-stop / jev-observe と同じガード）
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  main()
+    .then((code) => {
+      process.exitCode = code;
+    })
+    .catch((err) => {
+      console.error(err instanceof Error ? err.message : String(err));
+      process.exitCode = 1;
+    });
+}

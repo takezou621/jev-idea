@@ -88,6 +88,18 @@ describe("jev-review CLI — --feeling の検証（#28）", () => {
     expect(rec.feeling).toBe("annoy");
     expect(rec.note).toBe("迂回は事実として検出");
   });
+
+  it("list は分類済みマークに feeling を併記する（feeling 未記録は [tp]、未分類は [?] のまま）", async () => {
+    const dir = tempDir("jev-review-cli-list-");
+    writeLog(dir, 2);
+    await main(["1", "tp", "--feeling", "annoy", "--dir", dir]);
+    logs = [];
+    const code = await main(["list", "--dir", dir]);
+    expect(code).toBe(0);
+    const out = logs.join("\n");
+    expect(out).toContain("[tp:annoy] jev-2026-09-20.jsonl:1");
+    expect(out).toContain("[?] jev-2026-09-20.jsonl:2");
+  });
 });
 
 describe("jev-review CLI — report の feeling 内訳行（#28 週次サマリ）", () => {

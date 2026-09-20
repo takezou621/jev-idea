@@ -236,6 +236,15 @@ describe("feeling — 体感タグ（#28。docs/07 R3: ok=納得 / annoy=邪魔 
     );
     expect(() => loadClassifications(dir)).toThrow(/reviews\.jsonl:1: feeling must be ok\|annoy\|ignore/);
   });
+
+  it("JSON オブジェクトでない行（null・文字列）も行番号付きで拒否する（r.ref 参照の TypeError にしない）", () => {
+    const dir = tempDir("jev-review-non-object-");
+    writeFileSync(join(dir, "reviews.jsonl"), "null\n\"x\"\n");
+    expect(() => loadClassifications(dir)).toThrow(/reviews\.jsonl:1: record must be a JSON object/);
+    const ok = JSON.stringify({ at: "t", ref: "x.jsonl:1", classification: "tp" });
+    writeFileSync(join(dir, "reviews.jsonl"), `${ok}\n1\n`);
+    expect(() => loadClassifications(dir)).toThrow(/reviews\.jsonl:2: record must be a JSON object/);
+  });
 });
 
 describe("reviewReport — feeling 内訳（#28 週次サマリ。「邪魔」割合の素材）", () => {
