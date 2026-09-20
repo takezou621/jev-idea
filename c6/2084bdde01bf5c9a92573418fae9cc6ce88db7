@@ -1,0 +1,27 @@
+packages/core/test/bin-jev-review.test.ts
+  s_cc263e7e5c2fe4::t_ac84d3e86240b2 91-102
+packages/core/src/bin/jev-review.ts
+  s_cc263e7e5c2fe4::t_0369aebc00c8f1 144-156
+  s_cc263e7e5c2fe4::t_dcaef7026f5fbf 36
+packages/core/test/review.test.ts
+  s_cc263e7e5c2fe4::t_0b3ffa5779ffab 239-243,246-247
+  s_cc263e7e5c2fe4::t_6d8bd18b6baf06 244-245
+packages/core/src/review.ts
+  s_cc263e7e5c2fe4::t_74a5ef7c66c43f 106-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c62084bdde01bf5c9a92573418fae9cc6ce88db7",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
