@@ -12,6 +12,10 @@ import { resolveLogDir, type LogEntry } from "./log.js";
 
 export type Classification = "tp" | "fp" | "unclear";
 
+/** 体感タグ（docs/07 R3: ok=納得 / annoy=邪魔 / ignore=無関心。#28） */
+export type Feeling = "ok" | "annoy" | "ignore";
+export const FEELINGS: readonly Feeling[] = ["ok", "annoy", "ignore"];
+
 export type ReviewEntry = {
   /** ログ上の位置（"jev-YYYY-MM-DD.jsonl:<行番号>"。分類は ref に対して記録する） */
   ref: string;
@@ -22,6 +26,7 @@ export type ReviewRecord = {
   at: string;
   ref: string;
   classification: Classification;
+  feeling?: Feeling;
   note?: string;
 };
 
@@ -33,10 +38,18 @@ export type ReviewCounts = {
   unclear: number;
 };
 
+/** feeling の内訳。unrecorded は未記録（未分類を含む — 体感がまだ付いていない介入） */
+export type FeelingCounts = {
+  ok: number;
+  annoy: number;
+  ignore: number;
+  unrecorded: number;
+};
+
 export type ReviewReport = {
   /** label 接頭辞別（"golden-" / "mj-" はテスト由来。接頭辞なしは実運用 "production"） */
-  by_prefix: { prefix: string; counts: ReviewCounts }[];
-  /** tp/fp 表（point_id 別） */
+  by_prefix: { prefix: string; counts: ReviewCounts; feelings: FeelingCounts }[];
+  /** tp/fp 表（point_id 別）。feeling の内訳は prefix 別に限定する */
   by_point: { point_id: string; counts: ReviewCounts }[];
 };
 
@@ -96,7 +109,12 @@ export function loadClassifications(logDir?: string): Map<string, ReviewRecord> 
     if (r.classification !== "tp" && r.classification !== "fp" && r.classification !== "unclear") {
       throw new Error(at("classification must be tp|fp|unclear"));
     }
-    latest.set(r.ref, r);
+    if (r.feeling !== undefined && !FEELINGS.includes(r.feeling)) {
+      throw new Error(at("feeling must be ok|annoy|ignore"));
+    }
+    // feeling 未指定の再分類は前値を引き継ぐ（docs/05。classification とメモは後勝ちのまま）
+    const prev = latest.get(r.ref);
+    latest.set(r.ref, prev === undefined ? r : { ...r, feeling: r.feeling ?? prev.feeling });
   }
   return latest;
 }
@@ -107,6 +125,7 @@ export function recordClassification(
   ref: string,
   classification: Classification,
   note?: string,
+  feeling?: Feeling,
 ): void {
   const dir = resolveLogDir(logDir);
   if (!existsSync(dir)) {
@@ -119,6 +138,7 @@ export function recordClassification(
     at: new Date().toISOString(),
     ref,
     classification,
+    ...(feeling === undefined ? {} : { feeling }),
     ...(note === undefined ? {} : { note }),
   };
   appendFileSync(file, JSON.stringify(record) + "\n", { mode: 0o600 });
@@ -138,31 +158,41 @@ function emptyCounts(): ReviewCounts {
   return { total: 0, unclassified: 0, tp: 0, fp: 0, unclear: 0 };
 }
 
+function emptyFeelings(): FeelingCounts {
+  return { ok: 0, annoy: 0, ignore: 0, unrecorded: 0 };
+}
+
 /**
- * 分離集計 + tp/fp 表（docs/05「golden- / mj- 接頭辞の分離集計、tp/fp 表」）。
- * レポート自体は数値のみ（p や confidence を含まない）。
+ * 分離集計 + tp/fp 表 + feeling 内訳（docs/05「golden- / mj- 接頭辞の分離集計、
+ * tp/fp 表」・#28 週次サマリ: docs/07 R3 の「邪魔」割合の素材）。
+ * レポート自体は数値のみ（p や confidence を含まない）。feeling の内訳は
+ * prefix 別にのみ付ける（point 別には出さない）
  */
 export function reviewReport(logDir?: string): ReviewReport {
   const targets = loadReviewTargets(logDir);
   const latest = loadClassifications(logDir);
-  const byPrefix = new Map<string, ReviewCounts>();
+  const byPrefix = new Map<string, { counts: ReviewCounts; feelings: FeelingCounts }>();
   const byPoint = new Map<string, ReviewCounts>();
   for (const t of targets) {
-    const c = latest.get(t.ref)?.classification;
-    const bump = (m: Map<string, ReviewCounts>, key: string) => {
-      const counts = m.get(key) ?? emptyCounts();
-      counts.total++;
-      if (c === undefined) counts.unclassified++;
-      else counts[c]++;
-      m.set(key, counts);
-    };
-    bump(byPrefix, labelPrefix(t.entry));
-    bump(byPoint, t.entry.point_id);
+    const rec = latest.get(t.ref);
+    const c = rec?.classification;
+    const counts = byPrefix.get(labelPrefix(t.entry)) ?? { counts: emptyCounts(), feelings: emptyFeelings() };
+    counts.counts.total++;
+    if (c === undefined) counts.counts.unclassified++;
+    else counts.counts[c]++;
+    if (rec?.feeling === undefined) counts.feelings.unrecorded++;
+    else counts.feelings[rec.feeling]++;
+    byPrefix.set(labelPrefix(t.entry), counts);
+    const pc = byPoint.get(t.entry.point_id) ?? emptyCounts();
+    pc.total++;
+    if (c === undefined) pc.unclassified++;
+    else pc[c]++;
+    byPoint.set(t.entry.point_id, pc);
   }
   const sortEntries = <T>(entries: [string, T][]) =>
     entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
   return {
-    by_prefix: sortEntries([...byPrefix]).map(([prefix, counts]) => ({ prefix, counts })),
+    by_prefix: sortEntries([...byPrefix]).map(([prefix, g]) => ({ prefix, ...g })),
     by_point: sortEntries([...byPoint]).map(([point_id, counts]) => ({ point_id, counts })),
   };
 }
