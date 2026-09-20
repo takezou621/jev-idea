@@ -9,9 +9,9 @@
 #   ならず status: "failed" + fail-open で緑になる（docs/06 契約）。その場合は
 #   summary に「判定に失敗」が載り、observe 判定は積めない
 # - 判定ログ（would_block の本来 reason。tp/fp 分類の素材）は 0700/0600 で
-#   --log-dir に書き、リポジトリアクセス権限者のみ見える artifact として
-#   保存する（docs/07「リポジトリに入れない」は git リポジトリへの混入禁止。
-#   判定ログは PR の diff 以上の機密を含まない）
+#   --log-dir に書き artifact として保存する。artifact は public リポジトリでは
+#   誰でも取得できるため、判定ログは PR の diff 以上の機密（キー等）を含めない
+#   （docs/07「リポジトリに入れない」は git リポジトリへの混入禁止）
 name: jev-observe
 
 on:
@@ -39,6 +39,11 @@ jobs:
       - run: npm ci
       - run: npm run build --workspace=@jev/core
       - name: jev-observe (PR 判定 (a)・observe)
+        # env: GitHub Actions の secrets は明示的なマップなしでは子プロセスに
+        # 渡らない。未設定（fork PR 等）なら jev-observe は fail-open で緑になる
+        # （docs/06 契約）
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         # pipefail: CLI の配線エラー（exit 1）を tee で飲ませない
         run: |
           set -o pipefail
