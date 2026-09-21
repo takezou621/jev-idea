@@ -26,7 +26,8 @@ const checkAdultAge = compileAssertion(AdultAge);
 /**
  * 使用箇所（判定 (a) の検出対象）。この関数を変更して Stop すると、フックは
  * 事実として「diff が触れたアサーション: adult-age」と両判定の結果を表示する。
- * 違反変更の例（README 手順 2）: checkAdultAge を通らない経路をこの関数に足す
+ * 違反変更の例（README 手順 2）: `if (age >= 100) return age;` のように
+ * checkAdultAge を通らない経路をこの関数に足す
  */
 export function register(age: number): RegisteredAge {
   const violation = checkAdultAge(age);
