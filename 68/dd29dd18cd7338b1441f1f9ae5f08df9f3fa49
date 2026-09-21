@@ -1,0 +1,19 @@
+.github/workflows/jev-observe.yml
+  s_cc263e7e5c2fe4::t_e3cb517f5c54a9 55-56,63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "68dd29dd18cd7338b1441f1f9ae5f08df9f3fa49",
+  "prompts": {},
+  "sessions": {
+    "s_cc263e7e5c2fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7707b69d-f704-4b22-bf4d-a4843b53ea13",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "takezou621 <takezou621@gmail.com>"
+    }
+  }
+}
