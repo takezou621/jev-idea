@@ -52,10 +52,13 @@ jobs:
         run: |
           set -o pipefail
           node packages/core/dist/bin/jev-observe.js --base "origin/${{ github.base_ref }}" --log-dir "$PWD/.jev-observe-logs" | tee "$GITHUB_STEP_SUMMARY"
+      # include-hidden-files: ログ先の .jev-observe-logs がドット始まりのため
+      # 必須（v4 既定の false では隠しディレクトリ配下が除外され 0 件になる）
       - name: Upload judgment logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: jev-observe-logs
           path: .jev-observe-logs
+          include-hidden-files: true
           retention-days: 30
