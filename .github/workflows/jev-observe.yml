@@ -52,21 +52,13 @@ jobs:
         run: |
           set -o pipefail
           node packages/core/dist/bin/jev-observe.js --base "origin/${{ github.base_ref }}" --log-dir "$PWD/.jev-observe-logs" | tee "$GITHUB_STEP_SUMMARY"
+      # include-hidden-files: ログ先の .jev-observe-logs がドット始まりのため
+      # 必須（v4 既定の false では隠しディレクトリ配下が除外され 0 件になる）
       - name: Upload judgment logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: jev-observe-logs
           path: .jev-observe-logs
+          include-hidden-files: true
           retention-days: 30
-      # 一時デバッグ（#48 疎通確認）: 判定は summary に出るのに --log-dir に
-      # ファイルが現れないため、ログの実際の所在を確定する。原因特定後に削除する
-      - name: debug - locate judgment logs
-        if: always()
-        run: |
-          echo "--- \$PWD/.jev-observe-logs ---"
-          ls -la "$PWD/.jev-observe-logs" 2>&1 || true
-          echo "--- \$HOME/.jev/logs ---"
-          ls -la "$HOME/.jev/logs" 2>&1 || true
-          echo "--- find jev-*.jsonl under \$PWD ---"
-          find "$PWD" -maxdepth 4 -name "jev-*.jsonl" 2>/dev/null || true
