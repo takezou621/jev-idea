@@ -1,10 +1,25 @@
-# jev-observe — PR 判定 (a) の observe 配線（docs/01 3-2・#18）。
+# jev-observe — PR 判定 (a) の observe 配線（docs/01 3-2・#18・#44）。
 #
-# - observe 中: 判定結果は実挙動に影響しない（would_block は jev-judge の
-#   判定ログのみ。docs/05「フェイルオープンと observe」）。block 有効化は #19
-# - summary（markdown）には p が現れない（jev-judge 出力契約。docs/06）。
-# - 判定は jev-judge MCP サーバー経由（jev-observe CLI が bin を spawn）。
-#   判定の実行と決定は core 側で完結する
+# 信頼境界（#44）: 判定する「道具」と判定される「コード」を分離する。
+# - 道具（jev-observe CLI・jev-judge サーバー・判定ポイント実装）は trusted
+#   revision（base branch = main）から checkout・build する。PR コードは
+#   build も実行もしない（npm ci / npm run build は trusted 側の checkout のみ）
+# - 判定対象（evidence 素材: diff・使用箇所一覧・定義ファイル）は PR の
+#   merge commit を pr/ サブディレクトリに checkout して組む。PR の .ts は
+#   ts-morph の入力データになるだけで、プロセスとして実行されることはない
+# - TYPESAFE_API_KEY は observe 実行 step の env のみに置く。その step で動く
+#   プロセスは trusted CLI（とそれが spawn する trusted jev-judge）と git だけ
+#
+# CLI 乖離の扱い（#44 の設計判断）: PR が CLI・DSL・判定ポイント自体を変える
+# 場合でも、判定器は常に base branch 版が走る。PR の変更が判定に反映されるのは
+# main マージ後。乖離は trusted 側の検出能力低下（新しい DSL 記法を認識できず
+# 判定が skip になる等）として現れ、fail-open 方向にしか倒れない。どの版で
+# 判定したかは summary の「配線」節に revision を記録して追跡可能にする
+#
+# その他の契約（#18 から不変）:
+# - observe 中: 判定結果は実挙動に影響しない（would_block は判定ログのみ。
+#   docs/05「フェイルオープンと observe」）。block 有効化は #19
+# - summary（markdown）には p が現れない（jev-judge 出力契約。docs/06）
 # - プロバイダは TYPESAFE_API_KEY（secret）。未設定（fork PR 等）でも例外には
 #   ならず status: "failed" + fail-open で緑になる（docs/06 契約）。その場合は
 #   summary に「判定に失敗」が載り、observe 判定は積めない
@@ -20,6 +35,10 @@ on:
     paths:
       - "**.ts"
       - "packages/core/**"
+      # workflow 自体を変える PR でも配線（trusted build・サブディレクトリ
+      # checkout・secret の step スコープ）を自己確認する。判定は skip に
+      # なる（アサーション使用箇所を触れないため）
+      - ".github/workflows/jev-observe.yml"
 
 permissions:
   contents: read
@@ -29,29 +48,42 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      # --- trusted 側: 判定の道具を base branch から build（secret はまだ環境にない）---
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # <base>...HEAD の merge-base diff に履歴が必要
+          # 既定（PR merge ref）ではなく base branch。これが trusted revision
+          ref: ${{ github.base_ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run build --workspace=@jev/core
+
+      # --- 判定対象: PR の merge commit を pr/ に置く（コードは実行しない。
+      #     actions/checkout はツリーを展開するだけで lifecycle script 等は走らない）---
+      - uses: actions/checkout@v4
+        with:
+          path: pr
+          fetch-depth: 0 # <base>...HEAD の merge-base diff に履歴が必要
+
       - name: jev-observe (PR 判定 (a)・observe)
         # env: GitHub Actions の仕様上、secrets は明示的なマップなしでは子プロセスに
-        # 渡らない。未設定（fork PR 等）なら jev-observe は fail-open で緑になる
-        # （docs/06 契約）
-        # 注意: この経路では PR コードから build した CLI に secret が渡る。
-        # fork PR には GitHub が secret を渡さないため外部者には届かないが、
-        # same-repo PR のコードは実行者（collaborator）を信頼することになる。
-        # trusted revision からの CLI 実行への分離は別 Issue で扱う
+        # 渡らない。secret が届くのはこの step のみで、動くのは trusted CLI
+        # （が spawn する trusted jev-judge を含む）と git のみ。未設定
+        # （fork PR 等）なら jev-observe は fail-open で緑になる（docs/06 契約）
+        working-directory: pr
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         # pipefail: CLI の配線エラー（exit 1）を tee で飲ませない
         run: |
           set -o pipefail
-          node packages/core/dist/bin/jev-observe.js --base "origin/${{ github.base_ref }}" --log-dir "$PWD/.jev-observe-logs" | tee "$GITHUB_STEP_SUMMARY"
+          node "$GITHUB_WORKSPACE/packages/core/dist/bin/jev-observe.js" --base "origin/${{ github.base_ref }}" --log-dir "$GITHUB_WORKSPACE/.jev-observe-logs" | tee "$GITHUB_STEP_SUMMARY"
+          # 配線の記録（決定的な事実のみ。判定ではない）: どの trusted 版で
+          # どの PR checkout を判定したか。CLI 乖離の追跡に使う
+          printf '\n## 配線（#44 trusted revision）\n\n- 判定に使った CLI: %s @ %s\n- 判定対象（evidence 素材）: PR #%s merge commit @ %s\n' \
+            "${{ github.base_ref }}" "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" \
+            "${{ github.event.pull_request.number }}" "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
       # include-hidden-files: ログ先の .jev-observe-logs がドット始まりのため
       # 必須（v4 既定の false では隠しディレクトリ配下が除外され 0 件になる）
       - name: Upload judgment logs
