@@ -52,6 +52,24 @@ export type ReviewReport = {
   by_prefix: { prefix: string; counts: ReviewCounts; feelings: FeelingCounts }[];
   /** tp/fp 表（point_id 別）。feeling の内訳は prefix 別に限定する */
   by_point: { point_id: string; counts: ReviewCounts }[];
+  /** 所要時間の集計（docs/07 R2 の素材。prefix 別に分離 — テスト由来を混ぜない） */
+  latency: { prefix: string; stats: LatencyStats }[];
+};
+
+/**
+ * judge 全体の所要時間の集計（docs/07 R2「ループ阻害の少なさ」の素材）。
+ * ms_total は status に関係なく全エントリで数える — 最悪の介入がループを
+ * 止めるかを見るのが R2 の目的のため、failed（予算超過・provider 故障含む）も
+ * 分布に入れる。タイムアウトとそれ以外の failed の区別は判定ログ単独では
+ * つかないため、ここでは失敗数のみ出す（docs/09 の開示と同じ限界）
+ */
+export type LatencyStats = {
+  judged: number;
+  failed: number;
+  /** ms_total のパーセンタイル（最近傍ランク法: ソート済みの ceil(p/100*N) 番目） */
+  p50_ms: number;
+  p95_ms: number;
+  max_ms: number;
 };
 
 /**
@@ -64,24 +82,36 @@ function isReviewTarget(e: LogEntry): boolean {
   return e.status === "judged" && (e.action === "block" || e.would_block !== undefined);
 }
 
-/** logDir の判定ログを走査し、分類対象のエントリを決定的な順序（ファイル名・行番号）で返す */
-export function loadReviewTargets(logDir?: string): ReviewEntry[] {
+/** logDir の判定ログを走査し、全エントリを決定的な順序（ファイル名・行番号）で返す */
+function* scanLogEntries(logDir?: string): Generator<{ name: string; line: number; entry: LogEntry }> {
   const dir = resolveLogDir(logDir);
-  if (!existsSync(dir)) return [];
-  const out: ReviewEntry[] = [];
+  if (!existsSync(dir)) return;
   // 走査の命名パターンは宣言済み規約（core.req.ts）と同一にする（書き込み側と
   // 読み取り側でズレると判定ログを見落とし、レビュー記録を静かに失う）
   for (const name of readdirSync(dir).filter((n) => new RegExp(LogFileName.pattern).test(n)).sort()) {
     const lines = readFileSync(join(dir, name), "utf8").split("\n");
     for (let i = 0; i < lines.length; i++) {
       if (lines[i]!.trim().length === 0) continue;
+      let parsed: unknown;
       try {
-        const entry = JSON.parse(lines[i]!) as LogEntry;
-        if (isReviewTarget(entry)) out.push({ ref: `${name}:${i + 1}`, entry });
+        parsed = JSON.parse(lines[i]!);
       } catch {
-        // 壊れたログ行は分類対象にしない（ログは best effort 出力。review を止めない）
+        continue; // 壊れたログ行は読み飛ばす（ログは best effort 出力。review を止めない）
       }
+      // JSON としては有効でもエントリでない行（null・数値・配列等）は読み飛ばす
+      // （旧 loadReviewTargets の try 内評価と同じ保証 — クラッシュさせない・
+      // latency の失敗数も汚染しない。typeof [] === "object" のため配列は明示的に除外）
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) continue;
+      yield { name, line: i + 1, entry: parsed as LogEntry };
     }
+  }
+}
+
+/** logDir の判定ログを走査し、分類対象のエントリを決定的な順序（ファイル名・行番号）で返す */
+export function loadReviewTargets(logDir?: string): ReviewEntry[] {
+  const out: ReviewEntry[] = [];
+  for (const { name, line, entry } of scanLogEntries(logDir)) {
+    if (isReviewTarget(entry)) out.push({ ref: `${name}:${line}`, entry });
   }
   return out;
 }
@@ -169,8 +199,8 @@ function emptyFeelings(): FeelingCounts {
 }
 
 /**
- * 分離集計 + tp/fp 表 + feeling 内訳（docs/05「golden- / mj- 接頭辞の分離集計、
- * tp/fp 表」・#28 週次サマリ: docs/07 R3 の「邪魔」割合の素材）。
+ * 分離集計 + tp/fp 表 + feeling 内訳 + 所要時間集計（docs/05「golden- / mj- 接頭辞の
+ * 分離集計、tp/fp 表」・#28 週次サマリ: docs/07 R2 レイテンシ・R3 の「邪魔」割合の素材）。
  * レポート自体は数値のみ（p や confidence を含まない）。feeling の内訳は
  * prefix 別にのみ付ける（point 別には出さない）
  */
@@ -197,8 +227,36 @@ export function reviewReport(logDir?: string): ReviewReport {
   }
   const sortEntries = <T>(entries: [string, T][]) =>
     entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+
+  const lat = new Map<string, { judged: number; failed: number; ms: number[] }>();
+  for (const { entry } of scanLogEntries(logDir)) {
+    const g = lat.get(labelPrefix(entry)) ?? { judged: 0, failed: 0, ms: [] as number[] };
+    if (entry.status === "judged") g.judged++;
+    else g.failed++;
+    if (typeof entry.ms_total === "number") g.ms.push(entry.ms_total);
+    lat.set(labelPrefix(entry), g);
+  }
   return {
     by_prefix: sortEntries([...byPrefix]).map(([prefix, g]) => ({ prefix, ...g })),
     by_point: sortEntries([...byPoint]).map(([point_id, counts]) => ({ point_id, counts })),
+    latency: sortEntries([...lat]).map(([prefix, g]) => ({ prefix, stats: toLatencyStats(g) })),
   };
+}
+
+function toLatencyStats(g: { judged: number; failed: number; ms: number[] }): LatencyStats {
+  const sorted = [...g.ms].sort((a, b) => a - b);
+  return {
+    judged: g.judged,
+    failed: g.failed,
+    p50_ms: percentile(sorted, 50),
+    p95_ms: percentile(sorted, 95),
+    max_ms: sorted.length > 0 ? sorted[sorted.length - 1]! : 0,
+  };
+}
+
+/** 最近傍ランク法（1-based の ceil(p/100*N) 番目）。空の配列は 0 */
+function percentile(sorted: readonly number[], p: number): number {
+  if (sorted.length === 0) return 0;
+  const rank = Math.min(sorted.length, Math.max(1, Math.ceil((p / 100) * sorted.length)));
+  return sorted[rank - 1]!;
 }
