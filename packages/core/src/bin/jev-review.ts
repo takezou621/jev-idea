@@ -30,6 +30,7 @@ import {
   type Classification,
   type Feeling,
   type FeelingCounts,
+  type LatencyStats,
   type ReviewCounts,
   type ReviewEntry,
 } from "../review.js";
@@ -77,6 +78,17 @@ function printFeelings(f: FeelingCounts): void {
   console.log(`    feeling ok=${f.ok} annoy=${f.annoy} ignore=${f.ignore} unrecorded=${f.unrecorded}${pct}`);
 }
 
+/**
+ * 所要時間の集計行（docs/07 R2 の素材）。p95 < 2s・failed（タイムアウト含む）
+ * 0 件が基準。ms_total は judged / failed 両方の全エントリで数える
+ * （最悪の介入がループを止めるかを見るため）
+ */
+function printLatency(prefix: string, s: LatencyStats): void {
+  console.log(
+    `  ${prefix.padEnd(24)} judged=${String(s.judged).padEnd(5)} failed=${String(s.failed).padEnd(4)} p50=${s.p50_ms}ms p95=${s.p95_ms}ms max=${s.max_ms}ms`,
+  );
+}
+
 /** 引数は既定で process.argv.slice(2)。テストからは argv を直接渡す */
 export async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
   const [first, ...rest] = argv;
@@ -98,6 +110,8 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     }
     console.log("by point:");
     for (const r of report.by_point) printCounts(r.point_id, r.counts);
+    console.log("latency (docs/07 R2。全エントリの ms_total・最近傍ランク法):");
+    for (const r of report.latency) printLatency(r.prefix, r.stats);
     return 0;
   }
 

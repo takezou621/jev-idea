@@ -90,7 +90,7 @@ CI observe は `.ts` または `packages/core` 配下に触れる PR で自動�
 | 2. 通常どおり開発 | 特別な作業はしない。Stop フック・CI が自動で判定する | — |
 | 3. tp/fp 分類と体感タグ | would-block のたび、**人間が**分類する。体感タグは `--feeling ok\|annoy\|ignore` で付ける（ok=納得 / annoy=邪魔 / ignore=無関心。未指定の再分類では前の feeling を引き継ぐ） | `node packages/core/dist/bin/jev-review.js list --dir <log-dir>` → `… <番号> tp\|fp\|unclear [--feeling ok\|annoy\|ignore] [メモ] --dir <log-dir>` |
 | 4. 定性メモ | 「これがないと困る / 困った」場面をそのつど記録する | `jev-review` のメモ欄（または #28 の定性メモ） |
-| 5. 週次サマリ | 件数と内訳（tp/fp・体感内訳 — 体感を**記録した**介入のうち「邪魔」の割合を含む）を確認する | `node packages/core/dist/bin/jev-review.js report --dir <log-dir>`（prefix 別の feeling 内訳付き。#28 で整備済みの実行口） |
+| 5. 週次サマリ | 件数と内訳（tp/fp・体感内訳 — 体感を**記録した**介入のうち「邪魔」の割合を含む）と所要時間（docs/07 R2 の p95・failed 数）を確認する | `node packages/core/dist/bin/jev-review.js report --dir <log-dir>`（prefix 別の feeling 内訳・latency 集計付き。#28 で整備済みの実行口） |
 
 log-dir の所在:
 

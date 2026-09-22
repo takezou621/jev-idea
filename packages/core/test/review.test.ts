@@ -293,6 +293,48 @@ describe("reviewReport — feeling 内訳（#28 週次サマリ。「邪魔」�
   });
 });
 
+describe("reviewReport — latency 集計（#28 週次サマリ。docs/07 R2 の素材）", () => {
+  it("全エントリ（would-block 対象外・failed 含む）の ms_total で judged/failed 数と p50/p95/max を出す（最近傍ランク法）", () => {
+    const dir = tempDir("jev-review-latency-");
+    writeLog(dir, "jev-2026-09-19.jsonl", [
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 300 }), // 分類対象外も分布に入る
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 100 }),
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 400 }),
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 200 }),
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 1000 }),
+      entryJson({ point_id: "synth-closed", status: "failed", action: "block", ms_total: 5000, fail_mode: "closed" }),
+    ]);
+    // ソート済み ms: [100, 200, 300, 400, 1000, 5000]（N=6）
+    //   p50 = ceil(0.50*6) = 3 番目 = 300 / p95 = ceil(0.95*6) = 6 番目 = 5000
+    const report = reviewReport(dir);
+    expect(report.latency).toEqual([
+      {
+        prefix: "production",
+        stats: { judged: 5, failed: 1, p50_ms: 300, p95_ms: 5000, max_ms: 5000 },
+      },
+    ]);
+  });
+
+  it("golden- 等のテスト由来は production と分けて数える（by_prefix と同じ分離）", () => {
+    const dir = tempDir("jev-review-latency-prefix-");
+    writeLog(dir, "jev-2026-09-19.jsonl", [
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 700 }),
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 10, label: "golden-synth-open/x" }),
+    ]);
+    const report = reviewReport(dir);
+    expect(report.latency).toEqual([
+      { prefix: "golden", stats: { judged: 1, failed: 0, p50_ms: 10, p95_ms: 10, max_ms: 10 } },
+      { prefix: "production", stats: { judged: 1, failed: 0, p50_ms: 700, p95_ms: 700, max_ms: 700 } },
+    ]);
+  });
+
+  it("ログがない（空のディレクトリ・未作成）は latency 空配列。件数 0 でパーセンタイルを捏造しない", () => {
+    const dir = tempDir("jev-review-latency-empty-");
+    expect(reviewReport(dir).latency).toEqual([]);
+    expect(reviewReport(join(dir, "not-exist")).latency).toEqual([]);
+  });
+});
+
 describe("review の 1 サイクル（#4 DoD 2: 判定 → 人間分類 → ゴールデン化）", () => {
   const logDir = tempDir("jev-review-e2e-logs-");
   const goldenDir = tempDir("jev-review-e2e-golden-");

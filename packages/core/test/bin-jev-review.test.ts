@@ -123,3 +123,15 @@ describe("jev-review CLI — report の feeling 内訳行（#28 週次サマリ�
     expect(line).toBe("    feeling ok=0 annoy=0 ignore=0 unrecorded=1");
   });
 });
+
+describe("jev-review CLI — report の latency 行（#28 週次サマリ。docs/07 R2）", () => {
+  it("prefix 別に judged / failed / p50 / p95 / max を出す（ヘッダーに基準の所在を明記）", async () => {
+    const dir = tempDir("jev-review-cli-latency-");
+    writeLog(dir, 1); // ms_total: 1 のエントリ 1 件
+    const code = await main(["report", "--dir", dir]);
+    expect(code).toBe(0);
+    const out = logs.join("\n");
+    expect(out).toContain("latency (docs/07 R2");
+    expect(out).toContain("judged=1     failed=0    p50=1ms p95=1ms max=1ms");
+  });
+});
