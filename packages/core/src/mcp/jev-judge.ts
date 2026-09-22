@@ -14,6 +14,7 @@
 import { readFileSync, statSync, realpathSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { judge } from "../judge.js";
+import { InlineSectionChars, JudgeRepeats, PathsMaxBytes } from "../requirements/core.req.js";
 import { resolveThresholds, verdict } from "../thresholds.js";
 import type { Evidence, Judgment, JudgmentPoint, JudgeProvider, Section } from "../types.js";
 import type { ToolCallResult, ToolDef } from "./protocol.js";
@@ -100,8 +101,8 @@ function loadCallerEvidence(ev: unknown, root: () => string): Evidence {
       if (rel.startsWith("..") || isAbsolute(rel)) {
         throw new Error(`evidence path outside allowed root (${rootReal}): ${p}`);
       }
-      if (st.size > PATHS_MAX_BYTES) {
-        throw new Error(`evidence file exceeds ${PATHS_MAX_BYTES} bytes: ${p}`);
+      if (st.size > PathsMaxBytes.within[1]) {
+        throw new Error(`evidence file exceeds ${PathsMaxBytes.within[1]} bytes: ${p}`);
       }
       data.push({ text: readFileSync(real, "utf8"), source: p, sourceTime: st.mtime.toISOString() });
     }
@@ -113,8 +114,8 @@ function loadCallerEvidence(ev: unknown, root: () => string): Evidence {
       if (typeof s !== "object" || s === null) throw new Error("evidence.inline must be an array of {title?, text}");
       const { title, text } = s as Record<string, unknown>;
       if (typeof text !== "string") throw new Error("evidence.inline[].text must be a string");
-      if (text.length > INLINE_MAX_CHARS) {
-        throw new Error(`evidence.inline[].text exceeds ${INLINE_MAX_CHARS} chars (got: ${text.length})`);
+      if (text.length > InlineSectionChars.within[1]) {
+        throw new Error(`evidence.inline[].text exceeds ${InlineSectionChars.within[1]} chars (got: ${text.length})`);
       }
       data.push({
         text,
@@ -139,10 +140,10 @@ function parseOpts(opts: unknown): { budgetMs?: number; repeats?: number } {
     out.budgetMs = budgetMs;
   }
   if (repeats !== undefined) {
-    if (typeof repeats !== "number" || !Number.isInteger(repeats) || repeats < 1) {
-      throw new Error("opts.repeats must be an integer >= 1");
+    if (typeof repeats !== "number" || !Number.isInteger(repeats) || repeats < JudgeRepeats.within[0]) {
+      throw new Error(`opts.repeats must be an integer >= ${JudgeRepeats.within[0]}`);
     }
-    if (repeats > MAX_REPEATS) throw new Error(`opts.repeats must be <= ${MAX_REPEATS}`);
+    if (repeats > JudgeRepeats.within[1]) throw new Error(`opts.repeats must be <= ${JudgeRepeats.within[1]}`);
     out.repeats = repeats;
   }
   return out;
