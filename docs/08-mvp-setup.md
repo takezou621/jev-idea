@@ -53,11 +53,15 @@ fail-open。observe 中は実 block しない）。設定の変更は不要。
 
 ### 5. CI observe 配線（同梱済み — secret のみ）
 
-`.github/workflows/jev-observe.yml` が `.ts` または `packages/core` 配下に触れる PR
-で自動実行され、`secrets.TYPESAFE_API_KEY` を jev-observe に渡す（workflow の
-`env` マップ済み）。GitHub リポジトリの **Settings → Secrets and variables →
-Actions** に `TYPESAFE_API_KEY` を登録する。未登録でも workflow は緑になるが、
-summary に「判定に失敗」が載り observe 記録は積めない（fork PR も同様）。
+`.github/workflows/jev-observe.yml` が `.ts`・`packages/core` 配下・workflow 自体に
+触れる PR で自動実行される。イベントは `pull_request_target`（workflow 定義は
+常に main 側）で、判定の道具（CLI・jev-judge）は base branch（trusted revision）
+から build し、PR コードは build・実行せず evidence 素材（diff・使用箇所・
+定義ファイル）としてのみ使う（#44。secret `TYPESAFE_API_KEY` が PR コードや
+PR 由来の workflow 定義に渡る経路がない）。GitHub リポジトリの **Settings →
+Secrets and variables → Actions** に `TYPESAFE_API_KEY` を登録する。未登録でも
+workflow は緑になるが、summary に「判定に失敗」が載り observe 記録は積めない。
+fork PR は job がスキップされて緑になる（外部由来の diff に実キーを使わない）。
 
 ### 6. 動作確認（examples/age）
 

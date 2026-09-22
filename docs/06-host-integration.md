@@ -104,6 +104,38 @@
   非依存
 - **goose**: `goose configure` の extensions で stdio MCP サーバーとして同じ
   コマンドを登録する。recipe 経由で使う場合は recipe の `extensions` に書く
+- **CI（GitHub Actions・#44）**: リポジトリ同梱の
+  `.github/workflows/jev-observe.yml` が PR 判定 (a) の observe を実行する。
+  **判定する道具と判定されるコードを分離する**:
+  - イベントは `pull_request_target`（workflow 定義は常に base branch 側）。
+    `pull_request` だと実行される workflow 定義自体が PR の版になるため、
+    same-repo PR が secret 付き step を書き込む経路が残る。代償として
+    fork にも secret が渡るイベントなので、fork PR は job の `if` で
+    スキップする（fork はこれまでどおり判定を積まない）
+  - 道具（jev-observe CLI・jev-judge サーバー・判定ポイント実装）は trusted
+    revision（base branch）から checkout・build する。PR コードは build も
+    実行もされない（`npm ci`・`npm run build` は trusted 側の checkout のみで
+    動く。PR の package.json の lifecycle script が secret 環境で走る経路を閉じる。
+    この前提を崩す修正は workflow コメントの再設計注意を参照）
+  - 判定対象（evidence 素材: diff・使用箇所一覧・定義ファイル）は PR の merge
+    commit を `pr/` サブディレクトリに checkout して組む。PR の `.ts` は
+    ts-morph の入力データになるだけで、プロセスとして実行されない
+  - `TYPESAFE_API_KEY` は observe 実行 step の env のみに置く。その step で
+    動くのは trusted CLI（とそれが spawn する trusted jev-judge）と git のみ。
+    クライアントが spawn するサーバー bin はクライアントモジュールの位置から
+    解決される（`JEV_JUDGE_BIN`）ため、サブディレクトリの PR checkout にある
+    同名 bin が代わりに走ることはない
+  - **CLI 乖離の扱い**: PR が CLI・DSL・判定ポイント自体を変える場合でも、
+    判定器は常に base branch 版が走る（PR の変更が判定に反映されるのは main
+    マージ後）。乖離は検出能力の変化として現れる（新しい DSL 記法を認識できず
+    判定が skip になる過少検出、古い定義による過検出のどちらもありうる）が、
+    判定は observe（実 block なし）なので実挙動は変わらず、過検出は tp/fp
+    分類で fp として観測される。summary の「配線」節に使った CLI と判定対象の
+    revision を記録し、どの版で判定したかを追跡可能にする
+  - **残る前提**: collaborator（write 権限保持者）が新規 workflow ファイルを
+    追加して secret に触る経路は、個別 workflow の設計では閉じられない
+    （リポジトリ権限の問題）。この workflow が閉じるのは「jev-observe の
+    正規の経路が PR コード・PR 由来の定義に secret を渡す」こと
 - プロバイダは `TYPESAFE_API_KEY`（未設定なら `TYPESAFE_BASE_URL` をスタブに向けて
   検証する。両方未設定でもサーバーは起動し、判定は `status: "failed"` +
   failMode に従う action になる）
