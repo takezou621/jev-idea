@@ -255,9 +255,18 @@ function emptyFeelings(): FeelingCounts {
 export function reviewReport(logDir?: string, opts: ReportOptions = {}): ReviewReport {
   // since は正規形に揃えてから比較する（normalizeSince のコメント参照）
   const since = opts.since === undefined ? undefined : normalizeSince(opts.since);
-  // at は toISOString 出力（UTC・固定形式）のため辞書順 = 時系列。欠落・不正な at の
-  // 行は期間の内外が決められないため、since 指定時は除外する（楽観的に含めない）
-  const keep = (e: LogEntry) => since === undefined || (typeof e.at === "string" && e.at >= since);
+  // at も normalizeSince で正規形に揃えてから比較する（書き込み側は toISOString で
+  // 正規形を書くが、比較がライターの規律に依らないほうが total）。正規化できない
+  // （欠落・不正形式）at の行は期間の内外が決められないため、since 指定時は除外する
+  const keep = (e: LogEntry) => {
+    if (since === undefined) return true;
+    if (typeof e.at !== "string") return false;
+    try {
+      return normalizeSince(e.at) >= since;
+    } catch {
+      return false;
+    }
+  };
   const targets = loadReviewTargets(logDir).filter((t) => keep(t.entry));
   const latest = loadClassifications(logDir);
   const byPrefix = new Map<string, { counts: ReviewCounts; feelings: FeelingCounts }>();

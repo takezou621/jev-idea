@@ -407,6 +407,20 @@ describe("reviewReport — since フィルタ（docs/07 実使用期間の集計
     ]);
   });
 
+  it("at が正規形でない（オフセット表記）行も正規化して比較する。不正な at は除外", () => {
+    const dir = tempDir("jev-review-since-offset-at-");
+    writeLog(dir, "jev-2026-09-22.jsonl", [
+      // オフセット表記だが since と同一時刻（04:07Z = 13:07+09:00）→ 境界として含める
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 100, at: "2026-09-22T13:07:00.000+09:00" }),
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 50, at: "2026-09-22T03:00:00.000+00:00" }),
+      JSON.stringify({ point_id: "p", status: "judged", action: "pass", reasons: [], ms_total: 7, at: "not-a-date" }),
+    ]);
+    const report = reviewReport(dir, { since: "2026-09-22T04:07:00Z" });
+    expect(report.latency).toEqual([
+      { prefix: "production", stats: { judged: 1, failed: 0, p50_ms: 100, p95_ms: 100, max_ms: 100 } },
+    ]);
+  });
+
   it("since に ISO 8601 として不正な値を渡すと例外（黙って全期間に倒さない）", () => {
     const dir = tempDir("jev-review-since-invalid-");
     expect(() => reviewReport(dir, { since: "9月22日" })).toThrow(/--since must be an ISO 8601 timestamp/);
