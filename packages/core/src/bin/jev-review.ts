@@ -27,6 +27,7 @@ import {
   FEELINGS,
   loadClassifications,
   loadReviewTargets,
+  normalizeSince,
   recordClassification,
   reviewReport,
   type Classification,
@@ -105,11 +106,17 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
 
   if (first === "report") {
     // --since: 実使用期間の起点など、この時刻以降のみ集計する（docs/07 の期間は
-    // 期間前のエントリを消せない追記式ログ上で時間フィルタとして表現する）
-    const since = argValue(rest, "--since");
-    if (since !== undefined && Number.isNaN(Date.parse(since))) {
-      console.error(`--since must be an ISO 8601 timestamp (got: ${since})`);
-      return 1;
+    // 期間前のエントリを消せない追記式ログ上で時間フィルタとして表現する）。
+    // normalizeSince で正規形に揃える（秒精度 Z・オフセット表記も同一時刻として扱う）
+    const sinceRaw = argValue(rest, "--since");
+    let since: string | undefined;
+    if (sinceRaw !== undefined) {
+      try {
+        since = normalizeSince(sinceRaw);
+      } catch (err) {
+        console.error(err instanceof Error ? err.message : String(err));
+        return 1;
+      }
     }
     const report = reviewReport(logDir, since === undefined ? {} : { since });
     console.log("by prefix (golden- / mj- 等はテスト由来。接頭辞なしは production):");

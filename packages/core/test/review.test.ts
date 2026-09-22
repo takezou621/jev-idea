@@ -14,6 +14,7 @@ import {
   labelPrefix,
   loadClassifications,
   loadReviewTargets,
+  normalizeSince,
   recordClassification,
   reviewReport,
 } from "../src/review.js";
@@ -409,6 +410,30 @@ describe("reviewReport — since フィルタ（docs/07 実使用期間の集計
   it("since に ISO 8601 として不正な値を渡すと例外（黙って全期間に倒さない）", () => {
     const dir = tempDir("jev-review-since-invalid-");
     expect(() => reviewReport(dir, { since: "9月22日" })).toThrow(/--since must be an ISO 8601 timestamp/);
+  });
+
+  it("normalizeSince: 秒精度 Z 末尾・オフセット表記を正規形に揃える。非 ISO（Date.parse が通るもの含む）は拒否", () => {
+    expect(normalizeSince("2026-09-22T04:07:00Z")).toBe("2026-09-22T04:07:00.000Z");
+    expect(normalizeSince("2026-09-22T13:07:00+09:00")).toBe("2026-09-22T04:07:00.000Z");
+    expect(normalizeSince("2026-09-22T04:07:00.500Z")).toBe("2026-09-22T04:07:00.500Z");
+    // V8 の Date.parse が通る非 ISO 形式は無音の全除外を起こすため正規表現で落とす
+    expect(() => normalizeSince("9/22/2026")).toThrow(/--since must be an ISO 8601 timestamp/);
+    expect(() => normalizeSince("2026-09-22")).toThrow(/--since must be an ISO 8601 timestamp/);
+  });
+
+  it("境界同時刻（at == since）は含める（>=）。秒精度の since でも起点秒のエントリを落とさない", () => {
+    const dir = tempDir("jev-review-since-boundary-");
+    writeLog(dir, "jev-2026-09-22.jsonl", [
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 100, at: "2026-09-22T04:07:00.000Z" }),
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 200, at: "2026-09-22T04:07:00.500Z" }),
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 50, at: "2026-09-22T04:06:59.999Z" }),
+    ]);
+    // 秒精度 Z 末尾の since（正規形でない入力）。正規化されず辞書順比較のままなら
+    // "." < "Z" により起点秒の 2 件が誤除外される
+    const report = reviewReport(dir, { since: "2026-09-22T04:07:00Z" });
+    expect(report.latency).toEqual([
+      { prefix: "production", stats: { judged: 2, failed: 0, p50_ms: 100, p95_ms: 200, max_ms: 200 } },
+    ]);
   });
 
   it("list は since で絞らない（list の番号 = 全ログの走査順で分類 ref が安定）", () => {

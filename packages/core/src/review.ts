@@ -60,10 +60,25 @@ export type ReportOptions = {
   /**
    * この時刻（ISO 8601）以降のエントリのみ集計する（docs/07 実使用期間の起点など）。
    * 判定ログは追記式で期間前の行を消せないため、期間の集計は時間フィルタで切る。
-   * 未指定は全期間。`at` は toISOString 出力のため辞書順比較 = 時系列比較
+   * 未指定は全期間。比較は `normalizeSince` で正規化した正規形同士で行う
    */
   since?: string;
 };
+
+/**
+ * --since の入力を検証・正規化する。ISO 8601 の限定形式
+ * （YYYY-MM-DDTHH:mm:ss[.mmm](Z|±HH:mm)）のみ受け付け、`toISOString()` の
+ * 正規形（UTC・ミリ秒付き）に揃えて返す — 判定ログの `at` も toISOString 出力の
+ * ため、正規形同士の辞書順比較が時系列比較として成立する（片側だけ正規形だと
+ * 秒精度 `Z` 末尾・オフセット表記で無音の誤除外が起きる）。不正なら throw
+ */
+export function normalizeSince(since: string): string {
+  const ISO_SINCE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/;
+  if (!ISO_SINCE.test(since) || Number.isNaN(Date.parse(since))) {
+    throw new Error(`--since must be an ISO 8601 timestamp (got: ${since})`);
+  }
+  return new Date(since).toISOString();
+}
 
 /**
  * judge 全体の所要時間の集計（docs/07 R2「ループ阻害の少なさ」の素材）。
@@ -214,12 +229,11 @@ function emptyFeelings(): FeelingCounts {
  * prefix 別にのみ付ける（point 別には出さない）
  */
 export function reviewReport(logDir?: string, opts: ReportOptions = {}): ReviewReport {
-  if (opts.since !== undefined && Number.isNaN(Date.parse(opts.since))) {
-    throw new Error(`--since must be an ISO 8601 timestamp (got: ${opts.since})`);
-  }
+  // since は正規形に揃えてから比較する（normalizeSince のコメント参照）
+  const since = opts.since === undefined ? undefined : normalizeSince(opts.since);
   // at は toISOString 出力（UTC・固定形式）のため辞書順 = 時系列。欠落・不正な at の
   // 行は期間の内外が決められないため、since 指定時は除外する（楽観的に含めない）
-  const keep = (e: LogEntry) => opts.since === undefined || (typeof e.at === "string" && e.at >= opts.since);
+  const keep = (e: LogEntry) => since === undefined || (typeof e.at === "string" && e.at >= since);
   const targets = loadReviewTargets(logDir).filter((t) => keep(t.entry));
   const latest = loadClassifications(logDir);
   const byPrefix = new Map<string, { counts: ReviewCounts; feelings: FeelingCounts }>();
