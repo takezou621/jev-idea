@@ -1,27 +1,39 @@
 # jev-observe — PR 判定 (a) の observe 配線（docs/01 3-2・#18・#44）。
 #
 # 信頼境界（#44）: 判定する「道具」と判定される「コード」を分離する。
+# - イベントは pull_request_target（定義は常に base branch 側。PR がこの
+#   workflow を書き換えても実行されるのは main の版）。secret はこの
+#   workflow にのみ渡り、PR 由来の workflow 定義が secret 環境で走る経路を閉じる
 # - 道具（jev-observe CLI・jev-judge サーバー・判定ポイント実装）は trusted
-#   revision（base branch = main）から checkout・build する。PR コードは
-#   build も実行もしない（npm ci / npm run build は trusted 側の checkout のみ）
+#   revision（base branch = main）から checkout・build する（root checkout の
+#   ref は必ず明示する。pull_request_target では既定が PR merge commit になる
+#   ため、書き漏らすと PR コードを build することになる）
 # - 判定対象（evidence 素材: diff・使用箇所一覧・定義ファイル）は PR の
 #   merge commit を pr/ サブディレクトリに checkout して組む。PR の .ts は
-#   ts-morph の入力データになるだけで、プロセスとして実行されることはない
+#   ts-morph の入力データになるだけで、build もプロセス実行もされない
+#   （npm ci / npm run build は trusted 側の checkout のみ）
 # - TYPESAFE_API_KEY は observe 実行 step の env のみに置く。その step で動く
 #   プロセスは trusted CLI（とそれが spawn する trusted jev-judge）と git だけ
+# - fork PR は job 単位でスキップする（既定で緑）。pull_request_target は
+#   fork にも secret が渡るイベントのため、外部の diff に実キーを使わない
+#
+# pull_request_target の安全な使い方の前提（維持不可欠）: この workflow は
+# **pr/ のコードを一切実行しない**。将来の修正で pr/ に対する npm・node 実行を
+# 足すときはこの前提が崩れるため pull_request に戻すなど再設計すること
 #
 # CLI 乖離の扱い（#44 の設計判断）: PR が CLI・DSL・判定ポイント自体を変える
 # 場合でも、判定器は常に base branch 版が走る。PR の変更が判定に反映されるのは
-# main マージ後。乖離は trusted 側の検出能力低下（新しい DSL 記法を認識できず
-# 判定が skip になる等）として現れ、fail-open 方向にしか倒れない。どの版で
-# 判定したかは summary の「配線」節に revision を記録して追跡可能にする
+# main マージ後。乖離は検出能力の変化（新しい DSL 記法を認識できず skip になる
+# 過少検出、古い定義での過検出）として現れるが、判定はあくまで observe
+# （実 block なし）のため実挙動は変わらず、過検出は tp/fp 分類で観測される。
+# どの版で判定したかは summary の「配線」節に revision を記録して追跡する
 #
 # その他の契約（#18 から不変）:
 # - observe 中: 判定結果は実挙動に影響しない（would_block は判定ログのみ。
 #   docs/05「フェイルオープンと observe」）。block 有効化は #19
 # - summary（markdown）には p が現れない（jev-judge 出力契約。docs/06）
-# - プロバイダは TYPESAFE_API_KEY（secret）。未設定（fork PR 等）でも例外には
-#   ならず status: "failed" + fail-open で緑になる（docs/06 契約）。その場合は
+# - プロバイダは TYPESAFE_API_KEY（secret）。未設定でも例外にはならず
+#   status: "failed" + fail-open で緑になる（docs/06 契約）。その場合は
 #   summary に「判定に失敗」が載り、observe 判定は積めない
 # - 判定ログ（would_block の本来 reason。tp/fp 分類の素材）は 0700/0600 で
 #   --log-dir に書き artifact として保存する。artifact は public リポジトリでは
@@ -30,7 +42,7 @@
 name: jev-observe
 
 on:
-  pull_request:
+  pull_request_target:
     branches: [main]
     paths:
       - "**.ts"
@@ -45,13 +57,17 @@ permissions:
 
 jobs:
   observe:
+    # fork PR はスキップ（skip も緑）。pull_request_target は fork にも secret が
+    # 渡るため、外部由来の diff に実キーを使わない（#18 以前の挙動と同じ:
+    # fork には判定を積まず fail-open 相当）
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       # --- trusted 側: 判定の道具を base branch から build（secret はまだ環境にない）---
+      # ref を省略しないこと（省略時は PR merge commit = PR コードになる）
       - uses: actions/checkout@v4
         with:
-          # 既定（PR merge ref）ではなく base branch。これが trusted revision
           ref: ${{ github.base_ref }}
       - uses: actions/setup-node@v4
         with:
@@ -64,26 +80,32 @@ jobs:
       #     actions/checkout はツリーを展開するだけで lifecycle script 等は走らない）---
       - uses: actions/checkout@v4
         with:
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
           path: pr
           fetch-depth: 0 # <base>...HEAD の merge-base diff に履歴が必要
+      # diff の基点（origin/<base>）を明示的に取得する。checkout action の
+      # fetch 内部仕様（fetch-depth 時の refspec）に依らない決定的な配線
+      - name: Fetch base ref into pr/ for the diff base
+        run: git -C pr fetch --no-tags origin "+refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
 
       - name: jev-observe (PR 判定 (a)・observe)
         # env: GitHub Actions の仕様上、secrets は明示的なマップなしでは子プロセスに
         # 渡らない。secret が届くのはこの step のみで、動くのは trusted CLI
-        # （が spawn する trusted jev-judge を含む）と git のみ。未設定
-        # （fork PR 等）なら jev-observe は fail-open で緑になる（docs/06 契約）
+        # （が spawn する trusted jev-judge を含む）と git のみ
         working-directory: pr
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
-        # pipefail: CLI の配線エラー（exit 1）を tee で飲ませない
+        # GitHub 既定の bash は -e 付き。CLI の配線エラー（exit 1）で step を
+        # 失敗させつつ、配線記録（どの版で判定したか）は失敗時にも書く
         run: |
-          set -o pipefail
+          set +e
           node "$GITHUB_WORKSPACE/packages/core/dist/bin/jev-observe.js" --base "origin/${{ github.base_ref }}" --log-dir "$GITHUB_WORKSPACE/.jev-observe-logs" | tee "$GITHUB_STEP_SUMMARY"
-          # 配線の記録（決定的な事実のみ。判定ではない）: どの trusted 版で
-          # どの PR checkout を判定したか。CLI 乖離の追跡に使う
+          observe_status=${PIPESTATUS[0]}
+          set -e
           printf '\n## 配線（#44 trusted revision）\n\n- 判定に使った CLI: %s @ %s\n- 判定対象（evidence 素材）: PR #%s merge commit @ %s\n' \
             "${{ github.base_ref }}" "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" \
             "${{ github.event.pull_request.number }}" "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          exit "$observe_status"
       # include-hidden-files: ログ先の .jev-observe-logs がドット始まりのため
       # 必須（v4 既定の false では隠しディレクトリ配下が除外され 0 件になる）
       - name: Upload judgment logs
