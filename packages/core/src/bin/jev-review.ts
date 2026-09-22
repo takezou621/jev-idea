@@ -126,7 +126,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     }
     console.log("by point:");
     for (const r of report.by_point) printCounts(r.point_id, r.counts);
-    console.log("latency (docs/07 R2。全エントリの ms_total・最近傍ランク法):");
+    console.log(`latency (docs/07 R2。${since === undefined ? "全エントリ" : "期間内エントリ"}の ms_total・最近傍ランク法):`);
     for (const r of report.latency) printLatency(r.prefix, r.stats);
     if (since !== undefined) console.log(`(since ${since} — この時刻以降のエントリのみ)`);
     return 0;

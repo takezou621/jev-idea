@@ -419,6 +419,16 @@ describe("reviewReport — since フィルタ（docs/07 実使用期間の集計
     // V8 の Date.parse が通る非 ISO 形式は無音の全除外を起こすため正規表現で落とす
     expect(() => normalizeSince("9/22/2026")).toThrow(/--since must be an ISO 8601 timestamp/);
     expect(() => normalizeSince("2026-09-22")).toThrow(/--since must be an ISO 8601 timestamp/);
+    // 存在しない日付は Date.parse がロールオーバーで受けるため成分 round-trip で落とす
+    // （拒否されないと期間起点が日単位で黙ってずれる）
+    expect(() => normalizeSince("2026-02-30T00:00:00Z")).toThrow(/--since must be an ISO 8601 timestamp/);
+    expect(() => normalizeSince("2026-04-31T00:00:00Z")).toThrow(/--since must be an ISO 8601 timestamp/);
+    expect(() => normalizeSince("2026-02-29T00:00:00+09:00")).toThrow(/--since must be an ISO 8601 timestamp/); // 2026 年は平年
+    // 24:00:00（end-of-day）・うるう秒表記も厳密さ優先で拒否（翌日 00:00 と書ける）
+    expect(() => normalizeSince("2026-09-22T24:00:00Z")).toThrow(/--since must be an ISO 8601 timestamp/);
+    expect(() => normalizeSince("2026-09-22T23:59:60Z")).toThrow(/--since must be an ISO 8601 timestamp/);
+    // 実在する日付（閏日）は通す
+    expect(normalizeSince("2024-02-29T00:00:00Z")).toBe("2024-02-29T00:00:00.000Z");
   });
 
   it("境界同時刻（at == since）は含める（>=）。秒精度の since でも起点秒のエントリを落とさない", () => {

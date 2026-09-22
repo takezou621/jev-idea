@@ -70,14 +70,38 @@ export type ReportOptions = {
  * （YYYY-MM-DDTHH:mm:ss[.mmm](Z|±HH:mm)）のみ受け付け、`toISOString()` の
  * 正規形（UTC・ミリ秒付き）に揃えて返す — 判定ログの `at` も toISOString 出力の
  * ため、正規形同士の辞書順比較が時系列比較として成立する（片側だけ正規形だと
- * 秒精度 `Z` 末尾・オフセット表記で無音の誤除外が起きる）。不正なら throw
+ * 秒精度 `Z` 末尾・オフセット表記で無音の誤除外が起きる）。不正なら throw。
+ *
+ * 存在しない日付（2026-02-30 等）は Date.parse がロールオーバーで受けてしまう
+ * （期間起点が日単位で黙ってずれる）ため、成分の round-trip で実在性も検査する。
+ * この検査により ISO 8601 上有効な 24:00:00（end-of-day）・23:59:60（うるう秒）も
+ * 拒否されるが、期間起点として翌日 00:00:00 / 23:59:59 で書けるため厳密さを優先する
  */
 export function normalizeSince(since: string): string {
-  const ISO_SINCE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/;
-  if (!ISO_SINCE.test(since) || Number.isNaN(Date.parse(since))) {
+  const ISO_SINCE =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(Z|[+-]\d{2}:\d{2})$/;
+  const m = ISO_SINCE.exec(since);
+  const t = m === null ? NaN : new Date(since).getTime();
+  if (m === null || Number.isNaN(t)) {
     throw new Error(`--since must be an ISO 8601 timestamp (got: ${since})`);
   }
-  return new Date(since).toISOString();
+  // オフセット表現のまま同じ成分に戻るか（ロールオーバー検出）
+  const off = m[8]!;
+  const local = off === "Z" ? new Date(t) : new Date(t + (off.startsWith("+") ? 1 : -1) * (Number(off.slice(1, 3)) * 60 + Number(off.slice(4, 6))) * 60_000);
+  const parts = [
+    local.getUTCFullYear(),
+    local.getUTCMonth() + 1,
+    local.getUTCDate(),
+    local.getUTCHours(),
+    local.getUTCMinutes(),
+    local.getUTCSeconds(),
+    local.getUTCMilliseconds(),
+  ];
+  const given = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4]), Number(m[5]), Number(m[6]), m[7] === undefined ? 0 : Number(m[7].padEnd(3, "0"))];
+  if (parts.some((p, i) => p !== given[i])) {
+    throw new Error(`--since must be an ISO 8601 timestamp (got: ${since})`);
+  }
+  return new Date(t).toISOString();
 }
 
 /**
