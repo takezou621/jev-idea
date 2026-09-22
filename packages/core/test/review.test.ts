@@ -14,6 +14,7 @@ import {
   labelPrefix,
   loadClassifications,
   loadReviewTargets,
+  normalizeSince,
   recordClassification,
   reviewReport,
 } from "../src/review.js";
@@ -359,6 +360,123 @@ describe("reviewReport — latency 集計（#28 週次サマリ。docs/07 R2 の
     expect(report.latency).toEqual([
       { prefix: "production", stats: { judged: 2, failed: 0, p50_ms: 200, p95_ms: 200, max_ms: 200 } },
     ]);
+  });
+});
+
+describe("reviewReport — since フィルタ（docs/07 実使用期間の集計境界）", () => {
+  it("since 以降のエントリのみ集計する（tp/fp 表・latency とも期間前を除外）", () => {
+    const dir = tempDir("jev-review-since-");
+    writeLog(dir, "jev-2026-09-22.jsonl", [
+      entryJson({ point_id: "req-assertion-a1", action: "pass", ms_total: 100, at: "2026-09-22T01:00:00.000Z" }),
+      entryJson({
+        point_id: "req-assertion-a1",
+        action: "pass",
+        ms_total: 300,
+        at: "2026-09-22T05:00:00.000Z",
+        would_block: { reason: "r-期間内" },
+      }),
+    ]);
+    recordClassification(dir, "jev-2026-09-22.jsonl:2", "tp");
+    const report = reviewReport(dir, { since: "2026-09-22T04:07:00.000Z" });
+    // :1（期間前・review 対象外）と :2 のうち期間前は除外され、期間内の would-block 1 件のみ
+    expect(report.by_prefix).toEqual([
+      {
+        prefix: "production",
+        counts: { total: 1, unclassified: 0, tp: 1, fp: 0, unclear: 0 },
+        feelings: { ok: 0, annoy: 0, ignore: 0, unrecorded: 1 },
+      },
+    ]);
+    expect(report.latency).toEqual([
+      { prefix: "production", stats: { judged: 1, failed: 0, p50_ms: 300, p95_ms: 300, max_ms: 300 } },
+    ]);
+    // 未指定は全期間（期間前 1 件が latency に戻る）
+    expect(reviewReport(dir).latency).toEqual([
+      { prefix: "production", stats: { judged: 2, failed: 0, p50_ms: 100, p95_ms: 300, max_ms: 300 } },
+    ]);
+  });
+
+  it("at が欠落・非文字列の行は since 指定時は除外する（期間の内外が決められないため）", () => {
+    const dir = tempDir("jev-review-since-no-at-");
+    writeLog(dir, "jev-2026-09-22.jsonl", [
+      JSON.stringify({ point_id: "p", status: "judged", action: "pass", reasons: [], ms_total: 1 }),
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 2, at: "2026-09-22T06:00:00.000Z" }),
+    ]);
+    const report = reviewReport(dir, { since: "2026-09-22T04:07:00.000Z" });
+    expect(report.latency).toEqual([
+      { prefix: "production", stats: { judged: 1, failed: 0, p50_ms: 2, p95_ms: 2, max_ms: 2 } },
+    ]);
+  });
+
+  it("at が正規形でない（オフセット表記）行も正規化して比較する。不正な at は除外", () => {
+    const dir = tempDir("jev-review-since-offset-at-");
+    writeLog(dir, "jev-2026-09-22.jsonl", [
+      // オフセット表記だが since と同一時刻（04:07Z = 13:07+09:00）→ 境界として含める
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 100, at: "2026-09-22T13:07:00.000+09:00" }),
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 50, at: "2026-09-22T03:00:00.000+00:00" }),
+      JSON.stringify({ point_id: "p", status: "judged", action: "pass", reasons: [], ms_total: 7, at: "not-a-date" }),
+    ]);
+    const report = reviewReport(dir, { since: "2026-09-22T04:07:00Z" });
+    expect(report.latency).toEqual([
+      { prefix: "production", stats: { judged: 1, failed: 0, p50_ms: 100, p95_ms: 100, max_ms: 100 } },
+    ]);
+  });
+
+  it("since に ISO 8601 として不正な値を渡すと例外（黙って全期間に倒さない）", () => {
+    const dir = tempDir("jev-review-since-invalid-");
+    expect(() => reviewReport(dir, { since: "9月22日" })).toThrow(/--since must be an ISO 8601 timestamp/);
+  });
+
+  it("normalizeSince: 秒精度 Z 末尾・オフセット表記を正規形に揃える。非 ISO（Date.parse が通るもの含む）は拒否", () => {
+    expect(normalizeSince("2026-09-22T04:07:00Z")).toBe("2026-09-22T04:07:00.000Z");
+    expect(normalizeSince("2026-09-22T13:07:00+09:00")).toBe("2026-09-22T04:07:00.000Z");
+    expect(normalizeSince("2026-09-22T04:07:00.500Z")).toBe("2026-09-22T04:07:00.500Z");
+    // V8 の Date.parse が通る非 ISO 形式は無音の全除外を起こすため正規表現で落とす
+    expect(() => normalizeSince("9/22/2026")).toThrow(/--since must be an ISO 8601 timestamp/);
+    expect(() => normalizeSince("2026-09-22")).toThrow(/--since must be an ISO 8601 timestamp/);
+    // 存在しない日付は Date.parse がロールオーバーで受けるため成分 round-trip で落とす
+    // （拒否されないと期間起点が日単位で黙ってずれる）
+    expect(() => normalizeSince("2026-02-30T00:00:00Z")).toThrow(/--since must be an ISO 8601 timestamp/);
+    expect(() => normalizeSince("2026-04-31T00:00:00Z")).toThrow(/--since must be an ISO 8601 timestamp/);
+    expect(() => normalizeSince("2026-02-29T00:00:00+09:00")).toThrow(/--since must be an ISO 8601 timestamp/); // 2026 年は平年
+    // 24:00:00（end-of-day）・うるう秒表記も厳密さ優先で拒否（翌日 00:00 と書ける）
+    expect(() => normalizeSince("2026-09-22T24:00:00Z")).toThrow(/--since must be an ISO 8601 timestamp/);
+    expect(() => normalizeSince("2026-09-22T23:59:60Z")).toThrow(/--since must be an ISO 8601 timestamp/);
+    // 実在する日付（閏日）は通す
+    expect(normalizeSince("2024-02-29T00:00:00Z")).toBe("2024-02-29T00:00:00.000Z");
+  });
+
+  it("境界同時刻（at == since）は含める（>=）。秒精度の since でも起点秒のエントリを落とさない", () => {
+    const dir = tempDir("jev-review-since-boundary-");
+    writeLog(dir, "jev-2026-09-22.jsonl", [
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 100, at: "2026-09-22T04:07:00.000Z" }),
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 200, at: "2026-09-22T04:07:00.500Z" }),
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 50, at: "2026-09-22T04:06:59.999Z" }),
+    ]);
+    // 秒精度 Z 末尾の since（正規形でない入力）。正規化されず辞書順比較のままなら
+    // "." < "Z" により起点秒の 2 件が誤除外される
+    const report = reviewReport(dir, { since: "2026-09-22T04:07:00Z" });
+    expect(report.latency).toEqual([
+      { prefix: "production", stats: { judged: 2, failed: 0, p50_ms: 100, p95_ms: 200, max_ms: 200 } },
+    ]);
+  });
+
+  it("list は since で絞らない（list の番号 = 全ログの走査順で分類 ref が安定）", () => {
+    const dir = tempDir("jev-review-since-list-");
+    writeLog(dir, "jev-2026-09-22.jsonl", [
+      entryJson({
+        point_id: "req-assertion-a1",
+        action: "pass",
+        at: "2026-09-22T01:00:00.000Z",
+        would_block: { reason: "r-期間前" },
+      }),
+      entryJson({
+        point_id: "req-assertion-a1",
+        action: "pass",
+        at: "2026-09-22T06:00:00.000Z",
+        would_block: { reason: "r-期間内" },
+      }),
+    ]);
+    expect(loadReviewTargets(dir)).toHaveLength(2);
   });
 });
 

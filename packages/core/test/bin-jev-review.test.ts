@@ -135,3 +135,27 @@ describe("jev-review CLI — report の latency 行（#28 週次サマリ。docs
     expect(out).toContain("judged=1     failed=0    p50=1ms p95=1ms max=1ms");
   });
 });
+
+describe("jev-review CLI — report --since（実使用期間の集計境界）", () => {
+  it("--since で期間以降のみ集計し、出力の末尾に since を明記する", async () => {
+    const dir = tempDir("jev-review-cli-since-");
+    writeFileSync(
+      join(dir, "jev-2026-09-22.jsonl"),
+      `${JSON.stringify({ ...JSON.parse(WOULD_BLOCK_LINE), at: "2026-09-22T01:00:00.000Z", ms_total: 100 })}\n` +
+        `${JSON.stringify({ ...JSON.parse(WOULD_BLOCK_LINE), at: "2026-09-22T06:00:00.000Z", ms_total: 300 })}\n`,
+    );
+    const code = await main(["report", "--dir", dir, "--since", "2026-09-22T04:07:00.000Z"]);
+    expect(code).toBe(0);
+    const out = logs.join("\n");
+    expect(out).toContain("judged=1     failed=0    p50=300ms p95=300ms max=300ms");
+    expect(out).toContain("(since 2026-09-22T04:07:00.000Z — この時刻以降のエントリのみ)");
+  });
+
+  it("不正な --since 値は exit 1 で拒否する（黙って全期間に倒さない）", async () => {
+    const dir = tempDir("jev-review-cli-since-invalid-");
+    writeLog(dir, 1);
+    const code = await main(["report", "--dir", dir, "--since", "9月22日"]);
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("--since must be an ISO 8601 timestamp");
+  });
+});
