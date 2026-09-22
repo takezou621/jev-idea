@@ -92,11 +92,17 @@ function* scanLogEntries(logDir?: string): Generator<{ name: string; line: numbe
     const lines = readFileSync(join(dir, name), "utf8").split("\n");
     for (let i = 0; i < lines.length; i++) {
       if (lines[i]!.trim().length === 0) continue;
+      let parsed: unknown;
       try {
-        yield { name, line: i + 1, entry: JSON.parse(lines[i]!) as LogEntry };
+        parsed = JSON.parse(lines[i]!);
       } catch {
-        // 壊れたログ行は読み飛ばす（ログは best effort 出力。review を止めない）
+        continue; // 壊れたログ行は読み飛ばす（ログは best effort 出力。review を止めない）
       }
+      // JSON としては有効でもオブジェクトでない行（null・数値・配列等）は
+      // エントリではないので読み飛ばす（旧 loadReviewTargets の try 内評価と同じ
+      // 保証 — クラッシュさせない・latency の失敗数も汚染しない）
+      if (typeof parsed !== "object" || parsed === null) continue;
+      yield { name, line: i + 1, entry: parsed as LogEntry };
     }
   }
 }

@@ -333,6 +333,32 @@ describe("reviewReport — latency 集計（#28 週次サマリ。docs/07 R2 の
     expect(reviewReport(dir).latency).toEqual([]);
     expect(reviewReport(join(dir, "not-exist")).latency).toEqual([]);
   });
+
+  it("JSON としては有効でもオブジェクトでない行（null・数値）はスキップ — クラッシュも latency の失敗数汚染もしない", () => {
+    const dir = tempDir("jev-review-latency-nonobject-");
+    writeLog(dir, "jev-2026-09-19.jsonl", [
+      "null",
+      "42",
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 100 }),
+    ]);
+    const report = reviewReport(dir);
+    expect(report.latency).toEqual([
+      { prefix: "production", stats: { judged: 1, failed: 0, p50_ms: 100, p95_ms: 100, max_ms: 100 } },
+    ]);
+    expect(loadReviewTargets(dir)).toHaveLength(0);
+  });
+
+  it("ms_total 欠落・非数値のエントリは judged/failed には数えるが分布からは除外する", () => {
+    const dir = tempDir("jev-review-latency-no-ms-");
+    writeLog(dir, "jev-2026-09-19.jsonl", [
+      JSON.stringify({ at: "t", point_id: "p", status: "judged", action: "pass", reasons: [] }),
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 200 }),
+    ]);
+    const report = reviewReport(dir);
+    expect(report.latency).toEqual([
+      { prefix: "production", stats: { judged: 2, failed: 0, p50_ms: 200, p95_ms: 200, max_ms: 200 } },
+    ]);
+  });
 });
 
 describe("review の 1 サイクル（#4 DoD 2: 判定 → 人間分類 → ゴールデン化）", () => {
