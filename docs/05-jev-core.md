@@ -203,7 +203,7 @@ jev-claude の実装をそのまま一般化する:
 
 | 機能 | 仕様 |
 |---|---|
-| 判定ログ | `answers` / `reasons` / トークン数 / 所要時間（試行ごとと judge 全体）/ evidence の由来ファイルと時刻と **meta / data の種別**。コマンド文字列は先頭 200 文字。**evidence の生テキストは載せない**（スナップショット #4 に譲る。ログ肥大と機密散在の防止）。ディレクトリ 0700 / ファイル 0600（新規作成時のみ chmod。既存ディレクトリの権限は変えない）。ログ失敗は判定に影響させない |
+| 判定ログ | `answers` / `reasons` / トークン数 / 所要時間（試行ごとと judge 全体）/ evidence の由来ファイルと時刻と **meta / data の種別**。コマンド文字列は先頭 200 文字。**evidence の生テキストは載せない**（スナップショット #4 に譲る。ログ肥大と機密散在の防止）。日次ファイル `jev-YYYY-MM-DD.jsonl`（1 日 1 ファイル・日跨ぎで新ファイルに切替）に 1 行 1 エントリで追記する。ディレクトリ 0700 / ファイル 0600（新規作成時のみ chmod。既存ディレクトリの権限は変えない）。ログ失敗は判定に影響させない |
 | スナップショット | block（と closed ゲートの作動）時のみ状態テキスト全文を 64KB 上限で保存。report から `--show N` で参照 |
 | ゴールデン | 判定ポイントごとに `golden/<point-id>/cases.jsonl`（1 行 1 ケースの jsonl）。expected は**人手で確定**。境界で block/pass が揺れる同一入力は `FLAKY` リスト（`golden/flaky.jsonl`）に入れ分母から外す |
 | observe / would-block | observe が適用された block は `would_block`（本来の block reason）として記録する。ログの action は実際に返した action。tp/fp 分類の対象 |

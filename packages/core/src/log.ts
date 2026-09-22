@@ -5,7 +5,8 @@
  */
 import { appendFileSync, chmodSync, existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
+import { LogFileName } from "./requirements/core.req.js";
 import type { Action, Answer, Evidence, FailMode } from "./types.js";
 
 export type LogEvidenceSection = {
@@ -106,6 +107,13 @@ export function fileSink(logDir?: string): LogSink {
       const now = new Date();
       const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
       const path = join(dir, `jev-${local.toISOString().slice(0, 10)}.jsonl`);
+      // 宣言済み命名規約（core.req.ts）から外れるファイル名は書かない。
+      // 書かなかった事実は stderr に出す（判定には影響させない — docs/05「ログ失敗は
+      // 判定に影響しない」。ただし黙っていると「判定が一度も走らなかった」と区別できない）
+      if (!new RegExp(LogFileName.pattern).test(basename(path))) {
+        process.stderr.write(`jev log: file name does not match the declared pattern, judgment log not written (${basename(path)})\n`);
+        return;
+      }
       const existed = existsSync(path);
       appendFileSync(path, JSON.stringify(entry) + "\n", { mode: 0o600 });
       if (!existed) chmodSync(path, 0o600);

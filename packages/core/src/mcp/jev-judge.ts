@@ -14,23 +14,20 @@
 import { readFileSync, statSync, realpathSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { judge } from "../judge.js";
+import { InlineSectionChars, JudgeRepeats, PathsMaxBytes } from "../requirements/core.req.js";
 import { resolveThresholds, verdict } from "../thresholds.js";
 import type { Evidence, Judgment, JudgmentPoint, JudgeProvider, Section } from "../types.js";
 import type { ToolCallResult, ToolDef } from "./protocol.js";
 
 export const JUDGE_TOOL_NAME = "judge";
 
-/** inline は小さいもののみ（docs/06 原則 3）。1 セクションの上限文字数 */
-export const INLINE_MAX_CHARS = 4096;
-
-/** paths 1 ファイルの上限バイト数。判定対象の生データ（transcript 等）としては十分大きい */
-export const PATHS_MAX_BYTES = 1048576;
+/**
+ * 上限値は宣言済みアサーション（requirements/core.req.ts）を唯一の真実源とする
+ * （docs/06「定義は 1 か所」）。旧リテラル定数（INLINE_MAX_CHARS 等）は削除済み
+ */
 
 /** opts 未指定時の総予算（ミリ秒）。ツール境界で既定を設け、1 件の遅い判定が stdio ループを専有しない */
 export const DEFAULT_BUDGET_MS = 120000;
-
-/** repeats の上限 */
-export const MAX_REPEATS = 5;
 
 export type JevJudgeDeps = {
   points: readonly JudgmentPoint[];
@@ -100,8 +97,8 @@ function loadCallerEvidence(ev: unknown, root: () => string): Evidence {
       if (rel.startsWith("..") || isAbsolute(rel)) {
         throw new Error(`evidence path outside allowed root (${rootReal}): ${p}`);
       }
-      if (st.size > PATHS_MAX_BYTES) {
-        throw new Error(`evidence file exceeds ${PATHS_MAX_BYTES} bytes: ${p}`);
+      if (st.size > PathsMaxBytes.within[1]) {
+        throw new Error(`evidence file exceeds ${PathsMaxBytes.within[1]} bytes: ${p}`);
       }
       data.push({ text: readFileSync(real, "utf8"), source: p, sourceTime: st.mtime.toISOString() });
     }
@@ -113,8 +110,8 @@ function loadCallerEvidence(ev: unknown, root: () => string): Evidence {
       if (typeof s !== "object" || s === null) throw new Error("evidence.inline must be an array of {title?, text}");
       const { title, text } = s as Record<string, unknown>;
       if (typeof text !== "string") throw new Error("evidence.inline[].text must be a string");
-      if (text.length > INLINE_MAX_CHARS) {
-        throw new Error(`evidence.inline[].text exceeds ${INLINE_MAX_CHARS} chars (got: ${text.length})`);
+      if (text.length > InlineSectionChars.within[1]) {
+        throw new Error(`evidence.inline[].text exceeds ${InlineSectionChars.within[1]} chars (got: ${text.length})`);
       }
       data.push({
         text,
@@ -139,10 +136,10 @@ function parseOpts(opts: unknown): { budgetMs?: number; repeats?: number } {
     out.budgetMs = budgetMs;
   }
   if (repeats !== undefined) {
-    if (typeof repeats !== "number" || !Number.isInteger(repeats) || repeats < 1) {
-      throw new Error("opts.repeats must be an integer >= 1");
+    if (typeof repeats !== "number" || !Number.isInteger(repeats) || repeats < JudgeRepeats.within[0]) {
+      throw new Error(`opts.repeats must be an integer >= ${JudgeRepeats.within[0]}`);
     }
-    if (repeats > MAX_REPEATS) throw new Error(`opts.repeats must be <= ${MAX_REPEATS}`);
+    if (repeats > JudgeRepeats.within[1]) throw new Error(`opts.repeats must be <= ${JudgeRepeats.within[1]}`);
     out.repeats = repeats;
   }
   return out;
@@ -175,7 +172,7 @@ export function judgeTool(deps: JevJudgeDeps): { tool: ToolDef; call: (args: unk
         point: { type: "string", description: "登録済み JudgmentPoint の id" },
         evidence: {
           type: "object",
-          description: "判定対象データ。paths が基本（サーバーが読む。evidence root 配下のみ）。inline は 1 セクション 4KB 上限",
+          description: `判定対象データ。paths が基本（サーバーが読む。evidence root 配下のみ）。inline は 1 セクション ${InlineSectionChars.within[1]} 文字上限`,
           properties: {
             kind: { enum: ["paths", "inline"] },
             paths: { type: "array", items: { type: "string" } },
@@ -193,7 +190,7 @@ export function judgeTool(deps: JevJudgeDeps): { tool: ToolDef; call: (args: unk
           type: "object",
           properties: {
             budgetMs: { type: "number", description: "総予算（ミリ秒・既定 120000）" },
-            repeats: { type: "number", description: "多数決の試行回数（既定 1・上限 5）" },
+            repeats: { type: "number", description: `多数決の試行回数（既定 1・上限 ${JudgeRepeats.within[1]}）` },
           },
         },
       },
