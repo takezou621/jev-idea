@@ -101,11 +101,14 @@ jobs:
         run: |
           set +e
           node "$GITHUB_WORKSPACE/packages/core/dist/bin/jev-observe.js" --base "origin/${{ github.base_ref }}" --log-dir "$GITHUB_WORKSPACE/.jev-observe-logs" | tee "$GITHUB_STEP_SUMMARY"
-          observe_status=${PIPESTATUS[0]}
+          # PIPESTATUS は次のコマンドでリセットされるため、1 行で両方取る
+          observe_status=${PIPESTATUS[0]} tee_status=${PIPESTATUS[1]}
           set -e
           printf '\n## 配線（#44 trusted revision）\n\n- 判定に使った CLI: %s @ %s\n- 判定対象（evidence 素材）: PR #%s merge commit @ %s\n' \
             "${{ github.base_ref }}" "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" \
             "${{ github.event.pull_request.number }}" "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          # tee の失敗（summary 書き込み不能）も配線エラーとして扱う（CLI が成功のときのみ代替）
+          if [ "$observe_status" -eq 0 ]; then observe_status=$tee_status; fi
           exit "$observe_status"
       # include-hidden-files: ログ先の .jev-observe-logs がドット始まりのため
       # 必須（v4 既定の false では隠しディレクトリ配下が除外され 0 件になる）
