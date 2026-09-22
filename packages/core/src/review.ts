@@ -98,10 +98,10 @@ function* scanLogEntries(logDir?: string): Generator<{ name: string; line: numbe
       } catch {
         continue; // 壊れたログ行は読み飛ばす（ログは best effort 出力。review を止めない）
       }
-      // JSON としては有効でもオブジェクトでない行（null・数値・配列等）は
-      // エントリではないので読み飛ばす（旧 loadReviewTargets の try 内評価と同じ
-      // 保証 — クラッシュさせない・latency の失敗数も汚染しない）
-      if (typeof parsed !== "object" || parsed === null) continue;
+      // JSON としては有効でもエントリでない行（null・数値・配列等）は読み飛ばす
+      // （旧 loadReviewTargets の try 内評価と同じ保証 — クラッシュさせない・
+      // latency の失敗数も汚染しない。typeof [] === "object" のため配列は明示的に除外）
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) continue;
       yield { name, line: i + 1, entry: parsed as LogEntry };
     }
   }

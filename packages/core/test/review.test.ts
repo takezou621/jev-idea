@@ -334,11 +334,12 @@ describe("reviewReport — latency 集計（#28 週次サマリ。docs/07 R2 の
     expect(reviewReport(join(dir, "not-exist")).latency).toEqual([]);
   });
 
-  it("JSON としては有効でもオブジェクトでない行（null・数値）はスキップ — クラッシュも latency の失敗数汚染もしない", () => {
+  it("JSON としては有効でもオブジェクトでない行（null・数値・配列）はスキップ — クラッシュも latency の失敗数汚染もしない", () => {
     const dir = tempDir("jev-review-latency-nonobject-");
     writeLog(dir, "jev-2026-09-19.jsonl", [
       "null",
       "42",
+      "[1,2]",
       entryJson({ point_id: "synth-open", action: "pass", ms_total: 100 }),
     ]);
     const report = reviewReport(dir);
