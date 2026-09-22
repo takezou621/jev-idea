@@ -9,6 +9,7 @@
 import { appendFileSync, chmodSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { resolveLogDir, type LogEntry } from "./log.js";
+import { LogFileName } from "./requirements/core.req.js";
 
 export type Classification = "tp" | "fp" | "unclear";
 
@@ -68,7 +69,9 @@ export function loadReviewTargets(logDir?: string): ReviewEntry[] {
   const dir = resolveLogDir(logDir);
   if (!existsSync(dir)) return [];
   const out: ReviewEntry[] = [];
-  for (const name of readdirSync(dir).filter((n) => /^jev-\d{4}-\d{2}-\d{2}\.jsonl$/.test(n)).sort()) {
+  // 走査の命名パターンは宣言済み規約（core.req.ts）と同一にする（書き込み側と
+  // 読み取り側でズレると判定ログを見落とし、レビュー記録を静かに失う）
+  for (const name of readdirSync(dir).filter((n) => new RegExp(LogFileName.pattern).test(n)).sort()) {
     const lines = readFileSync(join(dir, name), "utf8").split("\n");
     for (let i = 0; i < lines.length; i++) {
       if (lines[i]!.trim().length === 0) continue;

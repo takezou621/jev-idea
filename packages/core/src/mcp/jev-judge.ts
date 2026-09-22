@@ -21,17 +21,13 @@ import type { ToolCallResult, ToolDef } from "./protocol.js";
 
 export const JUDGE_TOOL_NAME = "judge";
 
-/** inline は小さいもののみ（docs/06 原則 3）。1 セクションの上限文字数 */
-export const INLINE_MAX_CHARS = 4096;
-
-/** paths 1 ファイルの上限バイト数。判定対象の生データ（transcript 等）としては十分大きい */
-export const PATHS_MAX_BYTES = 1048576;
+/**
+ * 上限値は宣言済みアサーション（requirements/core.req.ts）を唯一の真実源とする
+ * （docs/06「定義は 1 か所」）。旧リテラル定数（INLINE_MAX_CHARS 等）は削除済み
+ */
 
 /** opts 未指定時の総予算（ミリ秒）。ツール境界で既定を設け、1 件の遅い判定が stdio ループを専有しない */
 export const DEFAULT_BUDGET_MS = 120000;
-
-/** repeats の上限 */
-export const MAX_REPEATS = 5;
 
 export type JevJudgeDeps = {
   points: readonly JudgmentPoint[];
@@ -176,7 +172,7 @@ export function judgeTool(deps: JevJudgeDeps): { tool: ToolDef; call: (args: unk
         point: { type: "string", description: "登録済み JudgmentPoint の id" },
         evidence: {
           type: "object",
-          description: "判定対象データ。paths が基本（サーバーが読む。evidence root 配下のみ）。inline は 1 セクション 4KB 上限",
+          description: `判定対象データ。paths が基本（サーバーが読む。evidence root 配下のみ）。inline は 1 セクション ${InlineSectionChars.within[1]} 文字上限`,
           properties: {
             kind: { enum: ["paths", "inline"] },
             paths: { type: "array", items: { type: "string" } },
@@ -194,7 +190,7 @@ export function judgeTool(deps: JevJudgeDeps): { tool: ToolDef; call: (args: unk
           type: "object",
           properties: {
             budgetMs: { type: "number", description: "総予算（ミリ秒・既定 120000）" },
-            repeats: { type: "number", description: "多数決の試行回数（既定 1・上限 5）" },
+            repeats: { type: "number", description: `多数決の試行回数（既定 1・上限 ${JudgeRepeats.within[1]}）` },
           },
         },
       },
