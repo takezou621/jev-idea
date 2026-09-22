@@ -5,9 +5,9 @@
 #   workflow を書き換えても実行されるのは main の版）。secret はこの
 #   workflow にのみ渡り、PR 由来の workflow 定義が secret 環境で走る経路を閉じる
 # - 道具（jev-observe CLI・jev-judge サーバー・判定ポイント実装）は trusted
-#   revision（base branch = main）から checkout・build する（root checkout の
-#   ref は必ず明示する。pull_request_target では既定が PR merge commit になる
-#   ため、書き漏らすと PR コードを build することになる）
+#   revision（base branch = main）から checkout・build する。root checkout の
+#   ref はイベントの既定値に依らず明示する（pull_request に戻した際の
+#   「PR merge commit を build する」事故を防ぐ固定句）
 # - 判定対象（evidence 素材: diff・使用箇所一覧・定義ファイル）は PR の
 #   merge commit を pr/ サブディレクトリに checkout して組む。PR の .ts は
 #   ts-morph の入力データになるだけで、build もプロセス実行もされない
@@ -65,7 +65,8 @@ jobs:
     timeout-minutes: 15
     steps:
       # --- trusted 側: 判定の道具を base branch から build（secret はまだ環境にない）---
-      # ref を省略しないこと（省略時は PR merge commit = PR コードになる）
+      # ref を明示（pull_request_target の既定も base branch 側だが、イベントの
+      # 既定値に依らない固定句にする）
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.base_ref }}
