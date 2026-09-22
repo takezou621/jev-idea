@@ -13,10 +13,12 @@
  *     番号は list の走査順。list と分類の間にログが追記されて番号がずれうる
  *     場合は ref 形式（jev-YYYY-MM-DD.jsonl:<行番号>）で指定する。
  *     tp はゴールデン化の材料
- *   jev-review report [--dir <log-dir>]
+ *   jev-review report [--dir <log-dir>] [--since <ISO 8601>]
  *     label 接頭辞別（golden- / mj- 等はテスト由来。接頭辞なしは実運用）と
  *     point 別の tp/fp 表。prefix 別には feeling の内訳（#28 週次サマリの
- *     「邪魔」割合を含む）も出す。数値のみ（p・confidence は含まない）
+ *     「邪魔」割合を含む）と R2 レイテンシ（judged/failed・p50/p95/max）も出す。
+ *     数値のみ（p・confidence は含まない）。--since はその時刻以降のエントリ
+ *     のみ集計（実使用期間の起点。判定ログは追記式のため行は消えない）
  *
  * log-dir の既定は ~/.jev/logs（JEV_LOG_DIR で上書き可）。分類ファイル
  * reviews.jsonl は判定ログと同じ機密扱い（0600 — AGENTS.md）。
@@ -102,7 +104,14 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
   }
 
   if (first === "report") {
-    const report = reviewReport(logDir);
+    // --since: 実使用期間の起点など、この時刻以降のみ集計する（docs/07 の期間は
+    // 期間前のエントリを消せない追記式ログ上で時間フィルタとして表現する）
+    const since = argValue(rest, "--since");
+    if (since !== undefined && Number.isNaN(Date.parse(since))) {
+      console.error(`--since must be an ISO 8601 timestamp (got: ${since})`);
+      return 1;
+    }
+    const report = reviewReport(logDir, since === undefined ? {} : { since });
     console.log("by prefix (golden- / mj- 等はテスト由来。接頭辞なしは production):");
     for (const r of report.by_prefix) {
       printCounts(r.prefix, r.counts);
@@ -112,6 +121,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     for (const r of report.by_point) printCounts(r.point_id, r.counts);
     console.log("latency (docs/07 R2。全エントリの ms_total・最近傍ランク法):");
     for (const r of report.latency) printLatency(r.prefix, r.stats);
+    if (since !== undefined) console.log(`(since ${since} — この時刻以降のエントリのみ)`);
     return 0;
   }
 

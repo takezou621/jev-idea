@@ -362,6 +362,75 @@ describe("reviewReport — latency 集計（#28 週次サマリ。docs/07 R2 の
   });
 });
 
+describe("reviewReport — since フィルタ（docs/07 実使用期間の集計境界）", () => {
+  it("since 以降のエントリのみ集計する（tp/fp 表・latency とも期間前を除外）", () => {
+    const dir = tempDir("jev-review-since-");
+    writeLog(dir, "jev-2026-09-22.jsonl", [
+      entryJson({ point_id: "req-assertion-a1", action: "pass", ms_total: 100, at: "2026-09-22T01:00:00.000Z" }),
+      entryJson({
+        point_id: "req-assertion-a1",
+        action: "pass",
+        ms_total: 300,
+        at: "2026-09-22T05:00:00.000Z",
+        would_block: { reason: "r-期間内" },
+      }),
+    ]);
+    recordClassification(dir, "jev-2026-09-22.jsonl:2", "tp");
+    const report = reviewReport(dir, { since: "2026-09-22T04:07:00.000Z" });
+    // :1（期間前・review 対象外）と :2 のうち期間前は除外され、期間内の would-block 1 件のみ
+    expect(report.by_prefix).toEqual([
+      {
+        prefix: "production",
+        counts: { total: 1, unclassified: 0, tp: 1, fp: 0, unclear: 0 },
+        feelings: { ok: 0, annoy: 0, ignore: 0, unrecorded: 1 },
+      },
+    ]);
+    expect(report.latency).toEqual([
+      { prefix: "production", stats: { judged: 1, failed: 0, p50_ms: 300, p95_ms: 300, max_ms: 300 } },
+    ]);
+    // 未指定は全期間（期間前 1 件が latency に戻る）
+    expect(reviewReport(dir).latency).toEqual([
+      { prefix: "production", stats: { judged: 2, failed: 0, p50_ms: 100, p95_ms: 300, max_ms: 300 } },
+    ]);
+  });
+
+  it("at が欠落・非文字列の行は since 指定時は除外する（期間の内外が決められないため）", () => {
+    const dir = tempDir("jev-review-since-no-at-");
+    writeLog(dir, "jev-2026-09-22.jsonl", [
+      JSON.stringify({ point_id: "p", status: "judged", action: "pass", reasons: [], ms_total: 1 }),
+      entryJson({ point_id: "synth-open", action: "pass", ms_total: 2, at: "2026-09-22T06:00:00.000Z" }),
+    ]);
+    const report = reviewReport(dir, { since: "2026-09-22T04:07:00.000Z" });
+    expect(report.latency).toEqual([
+      { prefix: "production", stats: { judged: 1, failed: 0, p50_ms: 2, p95_ms: 2, max_ms: 2 } },
+    ]);
+  });
+
+  it("since に ISO 8601 として不正な値を渡すと例外（黙って全期間に倒さない）", () => {
+    const dir = tempDir("jev-review-since-invalid-");
+    expect(() => reviewReport(dir, { since: "9月22日" })).toThrow(/--since must be an ISO 8601 timestamp/);
+  });
+
+  it("list は since で絞らない（list の番号 = 全ログの走査順で分類 ref が安定）", () => {
+    const dir = tempDir("jev-review-since-list-");
+    writeLog(dir, "jev-2026-09-22.jsonl", [
+      entryJson({
+        point_id: "req-assertion-a1",
+        action: "pass",
+        at: "2026-09-22T01:00:00.000Z",
+        would_block: { reason: "r-期間前" },
+      }),
+      entryJson({
+        point_id: "req-assertion-a1",
+        action: "pass",
+        at: "2026-09-22T06:00:00.000Z",
+        would_block: { reason: "r-期間内" },
+      }),
+    ]);
+    expect(loadReviewTargets(dir)).toHaveLength(2);
+  });
+});
+
 describe("review の 1 サイクル（#4 DoD 2: 判定 → 人間分類 → ゴールデン化）", () => {
   const logDir = tempDir("jev-review-e2e-logs-");
   const goldenDir = tempDir("jev-review-e2e-golden-");

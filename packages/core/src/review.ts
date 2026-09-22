@@ -56,6 +56,15 @@ export type ReviewReport = {
   latency: { prefix: string; stats: LatencyStats }[];
 };
 
+export type ReportOptions = {
+  /**
+   * この時刻（ISO 8601）以降のエントリのみ集計する（docs/07 実使用期間の起点など）。
+   * 判定ログは追記式で期間前の行を消せないため、期間の集計は時間フィルタで切る。
+   * 未指定は全期間。`at` は toISOString 出力のため辞書順比較 = 時系列比較
+   */
+  since?: string;
+};
+
 /**
  * judge 全体の所要時間の集計（docs/07 R2「ループ阻害の少なさ」の素材）。
  * ms_total は status に関係なく全エントリで数える — 最悪の介入がループを
@@ -204,8 +213,14 @@ function emptyFeelings(): FeelingCounts {
  * レポート自体は数値のみ（p や confidence を含まない）。feeling の内訳は
  * prefix 別にのみ付ける（point 別には出さない）
  */
-export function reviewReport(logDir?: string): ReviewReport {
-  const targets = loadReviewTargets(logDir);
+export function reviewReport(logDir?: string, opts: ReportOptions = {}): ReviewReport {
+  if (opts.since !== undefined && Number.isNaN(Date.parse(opts.since))) {
+    throw new Error(`--since must be an ISO 8601 timestamp (got: ${opts.since})`);
+  }
+  // at は toISOString 出力（UTC・固定形式）のため辞書順 = 時系列。欠落・不正な at の
+  // 行は期間の内外が決められないため、since 指定時は除外する（楽観的に含めない）
+  const keep = (e: LogEntry) => opts.since === undefined || (typeof e.at === "string" && e.at >= opts.since);
+  const targets = loadReviewTargets(logDir).filter((t) => keep(t.entry));
   const latest = loadClassifications(logDir);
   const byPrefix = new Map<string, { counts: ReviewCounts; feelings: FeelingCounts }>();
   const byPoint = new Map<string, ReviewCounts>();
@@ -230,6 +245,7 @@ export function reviewReport(logDir?: string): ReviewReport {
 
   const lat = new Map<string, { judged: number; failed: number; ms: number[] }>();
   for (const { entry } of scanLogEntries(logDir)) {
+    if (!keep(entry)) continue;
     const g = lat.get(labelPrefix(entry)) ?? { judged: 0, failed: 0, ms: [] as number[] };
     if (entry.status === "judged") g.judged++;
     else g.failed++;
